@@ -1,3 +1,11 @@
+// Proyecto SafeArea 
+// Importaciones necesarias para la aplicación, incluyendo Firebase, Provider y servicios personalizados.
+// Se establece la configuración de Firebase y se registra un handler para notificaciones en segundo plano.
+// El widget principal de la aplicación utiliza MultiProvider para gestionar el estado de temas, idioma, autenticación, reportes y chat.
+// Como pantalla de inicio se muestra el LoginScreen, y se configuran las localizaciones para español e inglés.
+// Por el momento se omiten los detalles de implementación de los servicios y pantallas, enfocándonos en la estructura general de la aplicación.
+// Solo la funcionalidad del LoginScreen y RegisterScreense muestra como pantalla de inicio, pero se espera que otras pantallas como ReportScreen, ChatScreen, etc. 
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
