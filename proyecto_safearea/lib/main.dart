@@ -6,6 +6,7 @@
 // Por el momento se omiten los detalles de implementación de los servicios y pantallas, enfocándonos en la estructura general de la aplicación.
 // Solo la funcionalidad del LoginScreen y RegisterScreense muestra como pantalla de inicio, pero se espera que otras pantallas como ReportScreen, ChatScreen, etc. 
 // Las pantallas siguientes solo mostraran funcionalidad simple. 
+// Se completo el login con email y contrasenna (User Story 2).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
