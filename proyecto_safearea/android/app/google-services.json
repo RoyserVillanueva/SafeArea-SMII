@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "715221615315",
+    "project_id": "royserfirebase",
+    "storage_bucket": "royserfirebase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715221615315:android:8d6feb01c1c27bf7608a26",
+        "android_client_info": {
+          "package_name": "com.example.proyecto_safearea"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2Zsao9d2VJn5nG9PX7qbazItazaVtqCM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715221615315:android:522cac0b93bdba94608a26",
+        "android_client_info": {
+          "package_name": "com.example.royser_firebase"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2Zsao9d2VJn5nG9PX7qbazItazaVtqCM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715221615315:android:acd2c94a2edca3fe608a26",
+        "android_client_info": {
+          "package_name": "com.newsdevs.safearea"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2Zsao9d2VJn5nG9PX7qbazItazaVtqCM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
