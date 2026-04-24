@@ -7,6 +7,7 @@
 // Solo la funcionalidad del LoginScreen y RegisterScreense muestra como pantalla de inicio, pero se espera que otras pantallas como ReportScreen, ChatScreen, etc. 
 // Las pantallas siguientes solo mostraran funcionalidad simple. 
 // Se completo el login con email y contrasenna (User Story 2).
+// Se validaron satisfactoriamente los flujos de Registro (User Story 1)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
