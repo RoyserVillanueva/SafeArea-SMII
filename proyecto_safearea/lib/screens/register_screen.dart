@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../widgets/auth_text_field.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -32,17 +33,72 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       if (error == null) {
-        Navigator.pushAndRemoveUntil(
+        /*Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
           (route) => false,
-        );
+        );*/
+        // 🔐 NUEVO: Mostrar diálogo de verificación (no navegar a Home)
+        _showVerificationDialog();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(error)),
         );
       }
     }
+  }
+  // 🔐 NUEVO: Metodo para envio de validacion de correo
+  void _showVerificationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // No permitir cerrar tocando fuera
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.email, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Verifica tu correo'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Te hemos enviado un enlace de verificación a tu correo electrónico.',
+              style: TextStyle(height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _emailController.text,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Por favor, verifica tu cuenta antes de iniciar sesión.',
+              style: TextStyle(height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Navegar a LoginScreen
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -263,4 +319,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     super.dispose();
   }
-}
+} 

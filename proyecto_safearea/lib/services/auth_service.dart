@@ -18,6 +18,15 @@ class AuthService with ChangeNotifier {
 
   UserModel? get currentUser => _currentUser; 
   bool get isLoading => _isLoading;
+  /// Verificar si el usuario tiene teléfono validado
+  bool get hasVerifiedPhone {
+    final user = _auth.currentUser;
+    return user?.phoneNumber != null && user!.phoneNumber!.isNotEmpty;
+  }
+  /// Obtener número de teléfono del usuario actual
+  String? get userPhoneNumber {
+    return _auth.currentUser?.phoneNumber;
+  }
 
   AuthService() {
     _loadCurrentUser();
@@ -158,6 +167,8 @@ class AuthService with ChangeNotifier {
         email: email,
         password: password,
       );
+      // 🔐 NUEVO: Enviar correo de verificación
+      await userCredential.user!.sendEmailVerification();
 
       final user = UserModel(
         id: userCredential.user!.uid,
@@ -171,6 +182,7 @@ class AuthService with ChangeNotifier {
         ...user.toMap(),
         'isOnline': true,
         'lastSeen': DateTime.now().toIso8601String(),
+        'emailVerified': false, // 🔐 NUEVO: Campo para tracking
       });
 
       _currentUser = user;
@@ -181,7 +193,7 @@ class AuthService with ChangeNotifier {
       // Iniciar listener para sincronización en tiempo real del rol
       _startListeningToUser(user.id);
 
-      // Finalizar registro inmediatamente (no esperar inicializaciones pesadas)
+      // NO iniciar sesión automáticamente - el usuario debe verificar email primero
       _isLoading = false;
       notifyListeners();
 
@@ -209,8 +221,16 @@ class AuthService with ChangeNotifier {
         email: email,
         password: password,
       );
+      final user = userCredential.user!;
+      // 🔐 NUEVO: Verificar que el email esté validado
+      if (!user.emailVerified) {
+        await _auth.signOut();
+        _isLoading = false;
+        notifyListeners();
+        return 'email_not_verified'; // Código especial para manejar en UI
+      }
 
-      final uid = userCredential.user!.uid;
+      final uid = user.uid;
       final userDocRef = _firestore.collection('users').doc(uid);
       final userDoc = await userDocRef.get();
 
@@ -227,6 +247,7 @@ class AuthService with ChangeNotifier {
           ...newUser.toMap(),
           'isOnline': true,
           'lastSeen': DateTime.now().toIso8601String(),
+          'emailVerified': true,
         });
         _currentUser = newUser;
       } else {
@@ -238,7 +259,9 @@ class AuthService with ChangeNotifier {
       }
 
       // Marcar presencia en línea
+      // 🔐 NUEVO: Actualizar estado de verificación en Firestore
       await userDocRef.update({
+        'emailVerified': true,
         'isOnline': true,
         'lastSeen': DateTime.now().toIso8601String(),
       });
@@ -419,5 +442,29 @@ class AuthService with ChangeNotifier {
     } catch (e) {
       return 'Error al cambiar rol: $e';
     }
+  }
+  /// Reenviar correo de verificación al usuario actual
+  Future<String?> resendVerificationEmail() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        return 'No hay usuario activo';
+      }
+      
+      if (user.emailVerified) {
+        return 'Tu email ya está verificado';
+      }
+      
+      await user.sendEmailVerification();
+      return null; // Éxito
+    } catch (e) {
+      return 'Error al reenviar verificación: $e';
+    }
+  }
+
+  /// Verificar si el email del usuario actual está verificado
+  bool isEmailVerified() {
+    final user = _auth.currentUser;
+    return user?.emailVerified ?? false;
   }
 }

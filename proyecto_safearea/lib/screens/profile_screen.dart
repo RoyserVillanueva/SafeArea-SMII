@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/auth_text_field.dart';
 import '../theme/app_theme.dart';
+import 'phone_verification_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -418,6 +419,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           },
                         ),
                         const SizedBox(height: 12),
+                        // 🔐 NUEVO: Botón para validar número de teléfono (solo si no está validado)
+                        Consumer<AuthService>(
+                          builder: (context, authService, _) {
+                            if (!authService.hasVerifiedPhone) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.verified_user, size: 18),
+                                  label: const Text('Validar número de teléfono'),
+                                  onPressed: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const PhoneVerificationScreen(),
+                                      ),
+                                    );
+                                    if (result == true && mounted) {
+                                      // Recargar datos del usuario después de validar
+                                      await authService.refreshCurrentUser();
+                                      setState(() {});
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Número de teléfono verificado correctamente'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                                  ),
+                                ),
+                              );
+                            } else {
+                              // Si ya está validado, mostrar indicador
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.green),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.verified, color: Colors.green, size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Teléfono verificado: ${authService.userPhoneNumber ?? _phoneController.text}',
+                                          style: const TextStyle(color: Colors.green, fontSize: 12),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
                         // RF-03: Botón para subir foto
                         OutlinedButton.icon(
                           icon: const Icon(Icons.add_photo_alternate),

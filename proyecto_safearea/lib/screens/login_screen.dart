@@ -33,12 +33,94 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
-      } else {
+      } 
+      else if(error == 'email_not_verified'){
+        // 🔐 NUEVO: Email no verificado - mostrar diálogo con opción de reenvío
+        _showEmailNotVerifiedDialog();
+      }
+      else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(error)),
         );
       }
     }
+  }
+  // 🔐 NUEVO: Si el email no esta verificado entonces no se loguea
+  void _showEmailNotVerifiedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Email no verificado'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tu cuenta aún no ha sido verificada.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Te enviamos un enlace de verificación a:',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _emailController.text,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Revisa tu bandeja de entrada y carpeta de spam.',
+              style: TextStyle(height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              
+              // Reenviar correo de verificación
+              final authService = Provider.of<AuthService>(context, listen: false);
+              final error = await authService.resendVerificationEmail();
+              
+              if (!mounted) return;
+              
+              if (error == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Correo de verificación reenviado. Revisa tu bandeja de entrada.'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error)),
+                );
+              }
+            },
+            child: const Text('Reenviar correo'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _goToRegister() {
