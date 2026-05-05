@@ -26,11 +26,11 @@ class _AddReportScreenState extends State<AddReportScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _locationController = TextEditingController();
+  final _locationController = TextEditingController(); // 6.3 Implementación de geolocalizacion automatica
   String? _lastPickedLatLng; // "lat,lng" para referencia interna
   double? _lat;
   double? _lng;
-  
+  // 6.3 Implementación de geolocalizacion automatica
   // Para búsqueda automática de ubicación
   List<dynamic> _locationSuggestions = [];
   bool _isSearchingLocation = false;

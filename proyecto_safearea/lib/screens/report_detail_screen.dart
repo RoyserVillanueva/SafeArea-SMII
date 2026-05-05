@@ -58,7 +58,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
-
+  // 8.4 Integrar mapa con ubicacion del incidente
   String _maskedLocation(String location) {
     final noDigits = location.replaceAll(RegExp(r'[0-9]'), '');
     final parts = noDigits.split(',');
@@ -240,7 +240,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Ubicación
+            // 8.4 Integrar mapa con Ubicación del incidente
             ListTile(
               leading: Icon(Icons.location_on, color: colorScheme.error),
               title: const Text('Ubicación'),
