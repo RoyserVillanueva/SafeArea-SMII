@@ -1,0 +1,14 @@
+[
+  {
+    "origin": [
+      "http://localhost:*",
+      "http://127.0.0.1:*",
+      "https://royserfirebase.web.app",
+      "https://royserfirebase.firebaseapp.com"
+    ],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "x-goog-*"],
+    "maxAgeSeconds": 3600
+  }
+]
+

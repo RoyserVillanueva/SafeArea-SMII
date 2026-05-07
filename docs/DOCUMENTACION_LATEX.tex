@@ -1,0 +1,764 @@
+% ============================================================================
+% DOCUMENTACIÓN TÉCNICA - PROYECTO SAFEAREA
+% Formato: LaTeX
+% Fecha: 27 de Noviembre de 2025
+% ============================================================================
+
+\documentclass[12pt,a4paper]{article}
+
+% Paquetes necesarios
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+
+% Configuración de página
+\geometry{margin=2.5cm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+
+% Configuración de colores
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{primaryblue}{RGB}{74,105,255}
+
+% Configuración de código
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% Configuración de encabezados
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{SafeArea - Documentación Técnica}
+\lhead{v0.1.0}
+\rfoot{Página \thepage}
+
+% Configuración de hipervínculos
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={SafeArea - Documentación Técnica},
+}
+
+% ============================================================================
+% INICIO DEL DOCUMENTO
+% ============================================================================
+
+\begin{document}
+
+% Portada
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries SAFEAREA\par}
+    \vspace{0.5cm}
+    {\Large Aplicación de Seguridad Comunitaria\par}
+    \vspace{2cm}
+    
+    {\LARGE\bfseries Documentación Técnica\par}
+    \vspace{1cm}
+    
+    {\large Versión 0.1.0\par}
+    \vspace{2cm}
+    
+    \begin{tabular}{ll}
+        \textbf{Plataforma:} & Flutter (Android, iOS, Web) \\
+        \textbf{Backend:} & Firebase \\
+        \textbf{Base de datos:} & Cloud Firestore \\
+        \textbf{Fecha:} & 27 de Noviembre de 2025 \\
+    \end{tabular}
+    
+    \vfill
+    
+    {\large com.newsdevs.safearea\par}
+\end{titlepage}
+
+% Tabla de contenidos
+\tableofcontents
+\newpage
+
+% ============================================================================
+% SECCIÓN 1: RESUMEN EJECUTIVO
+% ============================================================================
+
+\section{Resumen Ejecutivo}
+
+\subsection{Descripción del Proyecto}
+
+\textbf{SafeArea} es una aplicación móvil de \textbf{seguridad comunitaria} desarrollada en Flutter que permite a los ciudadanos reportar incidentes de seguridad en tiempo real, comunicarse mediante chat grupal por zonas geográficas y recibir notificaciones sobre eventos relevantes en su comunidad.
+
+\subsection{Problema que Resuelve}
+
+\begin{itemize}
+    \item \textbf{Falta de comunicación ciudadana:} Permite reportar incidentes (robos, incendios, emergencias, accidentes) de forma inmediata.
+    \item \textbf{Descoordinación comunitaria:} Facilita la comunicación entre vecinos mediante chats grupales organizados por zonas (Centro, Sur, Norte de Tacna).
+    \item \textbf{Respuesta lenta ante emergencias:} Sistema de notificaciones push en tiempo real para alertar a la comunidad.
+    \item \textbf{Gestión de seguridad:} Panel de administración para moderar reportes y gestionar usuarios.
+\end{itemize}
+
+\subsection{Tecnologías Principales}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Categoría} & \textbf{Tecnología} \\
+\hline
+Framework & Flutter 3.7.2+ (Dart) \\
+Backend & Firebase (BaaS) \\
+Base de datos & Cloud Firestore \\
+Autenticación & Firebase Auth \\
+Almacenamiento & Firebase Storage \\
+Notificaciones & Firebase Cloud Messaging \\
+Mapas & Google Maps Flutter + Flutter Map (OSM) \\
+Estado & Provider (ChangeNotifier) \\
+\hline
+\end{tabular}
+\caption{Stack tecnológico principal}
+\end{table}
+
+% ============================================================================
+% SECCIÓN 2: STACK TECNOLÓGICO
+% ============================================================================
+
+\section{Stack Tecnológico}
+
+\subsection{Lenguajes y Frameworks}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Componente} & \textbf{Versión} & \textbf{Propósito} \\
+\hline
+Dart SDK & \^{}3.7.2 & Lenguaje de programación \\
+Flutter SDK & 3.x & Framework de UI multiplataforma \\
+\hline
+\end{tabular}
+\caption{Lenguajes y frameworks}
+\end{table}
+
+\subsection{Dependencias de Producción}
+
+\begin{lstlisting}[language=yaml, caption=pubspec.yaml - Dependencias]
+dependencies:
+  # Core Flutter
+  flutter: sdk
+  flutter_localizations: sdk
+  
+  # Firebase Suite
+  firebase_core: ^4.2.0
+  firebase_auth: ^6.1.1
+  cloud_firestore: ^6.0.3
+  firebase_storage: ^13.0.3
+  firebase_messaging: ^16.0.3
+  
+  # Estado y Persistencia
+  provider: ^6.1.5+1
+  shared_preferences: ^2.5.3
+  
+  # Mapas y Geolocalizacion
+  google_maps_flutter: ^2.9.0
+  google_maps_flutter_web: ^0.5.7
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.1
+  
+  # UI y Media
+  image_picker: ^1.1.2
+  flutter_local_notifications: ^18.0.1
+  http: ^1.2.2
+  flutter_launcher_icons: ^0.14.4
+\end{lstlisting}
+
+\subsection{Base de Datos (Cloud Firestore)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Colección} & \textbf{Descripción} \\
+\hline
+users & Usuarios registrados (perfil, rol, estado) \\
+reports & Reportes de incidentes \\
+chatGroups & Grupos de chat (zonas y privados) \\
+chatGroups/\{id\}/messages & Mensajes de cada grupo \\
+\hline
+\end{tabular}
+\caption{Colecciones de Firestore}
+\end{table}
+
+% ============================================================================
+% SECCIÓN 3: ARQUITECTURA DEL SOFTWARE
+% ============================================================================
+
+\section{Arquitectura del Software}
+
+\subsection{Patrón de Diseño}
+
+El proyecto implementa una arquitectura \textbf{MVVM simplificada} (Model-View-ViewModel) usando \textbf{Provider} como gestor de estado.
+
+\begin{lstlisting}[caption=Estructura de capas]
+PRESENTATION (Screens, Widgets, Theme)
+         |
+         v
+STATE MANAGEMENT (AuthService, ReportService, ChatService)
+         |
+         v
+DATA (UserModel, ReportModel, ChatGroupModel)
+         |
+         v
+FIREBASE (Firestore, Auth, Storage)
+\end{lstlisting}
+
+\subsection{Estructura de Carpetas}
+
+\begin{lstlisting}[caption=Estructura del proyecto]
+lib/
+|-- main.dart                 # Punto de entrada
+|-- firebase_options.dart     # Configuracion Firebase
+|
+|-- models/                   # Modelos de datos
+|   |-- user_model.dart
+|   |-- report_model.dart
+|   |-- chat_group_model.dart
+|
+|-- services/                 # Logica de negocio
+|   |-- auth_service.dart
+|   |-- report_service.dart
+|   |-- chat_service.dart
+|   |-- notification_service.dart
+|   |-- storage_service.dart
+|   |-- theme_service.dart
+|   |-- language_service.dart
+|
+|-- screens/                  # Vistas (UI)
+|   |-- login_screen.dart
+|   |-- register_screen.dart
+|   |-- home_screen.dart
+|   |-- reports_screen.dart
+|   |-- add_report_screen.dart
+|   |-- chat_groups_screen.dart
+|   |-- chat_screen.dart
+|   |-- profile_screen.dart
+|   |-- settings_screen.dart
+|   |-- dashboard_screen.dart
+|   |-- users_screen.dart
+|
+|-- widgets/                  # Componentes reutilizables
+|   |-- auth_text_field.dart
+|   |-- report_card.dart
+|   |-- filter_chip.dart
+|   |-- loading_button.dart
+|
+|-- theme/                    # Configuracion de estilos
+    |-- app_theme.dart
+\end{lstlisting}
+
+% ============================================================================
+% SECCIÓN 4: REQUERIMIENTOS FUNCIONALES
+% ============================================================================
+
+\section{Especificación de Requerimientos Funcionales (RF)}
+
+\subsection{Módulo de Autenticación}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endhead
+RF-01 & Registro de usuarios & El sistema permite registrar nuevos usuarios con email, contraseña y nombre \\
+\hline
+RF-02 & Inicio de sesión & El sistema permite autenticar usuarios mediante email y contraseña \\
+\hline
+RF-03 & Cierre de sesión & El sistema permite cerrar la sesión del usuario actual \\
+\hline
+RF-04 & Gestión de perfil & El usuario puede ver y editar su nombre, teléfono y foto de perfil \\
+\hline
+\caption{Requerimientos funcionales - Autenticación}
+\end{longtable}
+
+\subsection{Módulo de Reportes}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endhead
+RF-05 & Crear reporte & El usuario puede crear reportes de incidentes con título, descripción, tipo, ubicación e imágenes \\
+\hline
+RF-06 & Categorización de reportes & Los reportes se clasifican por tipo: robo, incendio, emergencia, accidente, otro \\
+\hline
+RF-07 & Gestión de estados & Los reportes tienen estados: activo, en\_proceso, resuelto \\
+\hline
+RF-08 & Edición de reportes & El usuario puede editar sus reportes dentro de las primeras 24 horas \\
+\hline
+RF-09 & Listado de reportes & El sistema muestra todos los reportes activos con filtros por tipo y estado \\
+\hline
+RF-10 & Detalle de reporte & El usuario puede ver el detalle completo de un reporte incluyendo imágenes y ubicación en mapa \\
+\hline
+RF-11 & Adjuntar imágenes & El usuario puede adjuntar hasta 3 imágenes por reporte desde cámara o galería \\
+\hline
+\caption{Requerimientos funcionales - Reportes}
+\end{longtable}
+
+\subsection{Módulo de Chat Comunitario}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endhead
+RF-12 & Chat grupal por zonas & El sistema provee grupos de chat predefinidos por zonas geográficas (Centro, Sur, Norte) \\
+\hline
+RF-13 & Crear grupos de chat & Los usuarios pueden crear grupos de chat públicos o privados \\
+\hline
+RF-14 & Enviar mensajes & Los usuarios pueden enviar mensajes de texto e imágenes en los grupos \\
+\hline
+RF-15 & Unirse/Salir de grupos & Los usuarios pueden unirse o abandonar grupos de chat \\
+\hline
+RF-16 & Chat privado & Los usuarios pueden iniciar conversaciones privadas entre dos personas \\
+\hline
+\caption{Requerimientos funcionales - Chat}
+\end{longtable}
+
+\subsection{Módulo de Administración}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endhead
+RF-17 & Dashboard de estadísticas & Los administradores pueden ver estadísticas de reportes y actividad \\
+\hline
+RF-18 & Gestión de usuarios & Los administradores pueden ver, activar/desactivar usuarios \\
+\hline
+RF-19 & Moderación de reportes & Los administradores pueden cambiar el estado de cualquier reporte \\
+\hline
+RF-20 & Eliminación lógica & Los administradores pueden eliminar reportes (eliminación lógica) \\
+\hline
+\caption{Requerimientos funcionales - Administración}
+\end{longtable}
+
+\subsection{Módulo de Notificaciones}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endhead
+RF-21 & Notificaciones de nuevos reportes & El sistema notifica a todos los usuarios cuando se crea un nuevo reporte \\
+\hline
+RF-22 & Notificaciones de cambio de estado & El sistema notifica al dueño cuando cambia el estado de su reporte \\
+\hline
+RF-23 & Notificaciones de chat & El sistema notifica cuando hay nuevos mensajes en los grupos \\
+\hline
+\caption{Requerimientos funcionales - Notificaciones}
+\end{longtable}
+
+\subsection{Módulo de Configuración}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Descripción} \\
+\hline
+\endhead
+RF-24 & Configuración de notificaciones & El usuario puede activar/desactivar notificaciones, sonido y vibración \\
+\hline
+RF-25 & Tema de la aplicación & El usuario puede elegir entre tema claro, oscuro o automático (sistema) \\
+\hline
+RF-26 & Limpiar caché & El usuario puede limpiar datos temporales de la aplicación \\
+\hline
+\caption{Requerimientos funcionales - Configuración}
+\end{longtable}
+
+% ============================================================================
+% SECCIÓN 5: REQUERIMIENTOS NO FUNCIONALES
+% ============================================================================
+
+\section{Requerimientos No Funcionales (RNF)}
+
+\subsection{Seguridad}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endhead
+RNF-01 & Autenticación segura & Firebase Auth con email/contraseña \\
+\hline
+RNF-02 & Autorización por roles & Sistema de roles (user/admin) verificado en cliente y Firestore Rules \\
+\hline
+RNF-03 & Protección de datos sensibles & Enmascaramiento de ubicación exacta para usuarios no propietarios del reporte \\
+\hline
+RNF-04 & Validación de formularios & Validación de email, contraseña mínima 6 caracteres, campos requeridos \\
+\hline
+\caption{Requerimientos no funcionales - Seguridad}
+\end{longtable}
+
+\subsection{Rendimiento}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endhead
+RNF-05 & Carga eficiente de datos & Uso de Streams de Firestore con límites (100 mensajes por carga) \\
+\hline
+RNF-06 & Optimización de imágenes & Compresión de imágenes antes de subir a Firebase Storage \\
+\hline
+RNF-07 & Caché local & SharedPreferences para configuraciones y preferencias \\
+\hline
+RNF-08 & Lazy loading & Carga bajo demanda de datos en listas \\
+\hline
+\caption{Requerimientos no funcionales - Rendimiento}
+\end{longtable}
+
+\subsection{Compatibilidad}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endhead
+RNF-09 & Multiplataforma & Soporte para Android (principal), iOS y Web \\
+\hline
+RNF-10 & Responsive design & UI adaptable a diferentes tamaños de pantalla \\
+\hline
+RNF-11 & Soporte offline parcial & Firestore offline persistence habilitado \\
+\hline
+\caption{Requerimientos no funcionales - Compatibilidad}
+\end{longtable}
+
+\subsection{Usabilidad}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endhead
+RNF-12 & Material Design 3 & Uso de ColorScheme.fromSeed para consistencia visual \\
+\hline
+RNF-13 & Feedback visual & Estados de carga, mensajes de error/éxito, indicadores de progreso \\
+\hline
+RNF-14 & Navegación intuitiva & Menú principal con acceso directo a funcionalidades según rol \\
+\hline
+RNF-15 & Accesibilidad & Uso de semántica de Flutter, tooltips en iconos \\
+\hline
+\caption{Requerimientos no funcionales - Usabilidad}
+\end{longtable}
+
+\subsection{Mantenibilidad}
+
+\begin{longtable}{|p{1.5cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Requerimiento} & \textbf{Implementación} \\
+\hline
+\endhead
+RNF-16 & Código limpio & Separación de responsabilidades (MVVM), uso de flutter\_lints \\
+\hline
+RNF-17 & Modularidad & Servicios independientes con ChangeNotifier \\
+\hline
+RNF-18 & Documentación en código & Comentarios con referencias a RF (ej: // RF-05: Crear reporte) \\
+\hline
+\caption{Requerimientos no funcionales - Mantenibilidad}
+\end{longtable}
+
+% ============================================================================
+% SECCIÓN 6: DIAGRAMAS
+% ============================================================================
+
+\section{Diagramas Técnicos}
+
+\textbf{Nota:} Los diagramas se generan con Mermaid.js. Ver archivo separado \texttt{DIAGRAMAS\_MERMAID.md} para los códigos fuente.
+
+\subsection{Diagrama de Casos de Uso}
+Muestra la interacción entre los actores (Usuario y Administrador) con los requerimientos funcionales del sistema.
+
+\subsection{Diagrama de Clases}
+Representa la estructura de los modelos de datos (UserModel, Report, ChatGroup, Message) y los servicios (AuthService, ReportService, ChatService) con sus relaciones.
+
+\subsection{Diagrama de Secuencia}
+Ilustra el flujo de creación de un reporte, desde la interacción del usuario hasta el almacenamiento en Firebase y el envío de notificaciones.
+
+% ============================================================================
+% SECCIÓN 7: GUÍA DE INSTALACIÓN
+% ============================================================================
+
+\section{Guía de Instalación y Despliegue}
+
+\subsection{Requisitos Previos}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Herramienta} & \textbf{Versión Mínima} & \textbf{Verificar} \\
+\hline
+Flutter SDK & 3.7.2+ & \texttt{flutter --version} \\
+Dart SDK & 3.7.2+ & \texttt{dart --version} \\
+Android Studio & 2022.1+ & Con Android SDK 33+ \\
+Git & 2.x & \texttt{git --version} \\
+Cuenta Firebase & - & console.firebase.google.com \\
+\hline
+\end{tabular}
+\caption{Requisitos previos}
+\end{table}
+
+\subsection{Pasos de Instalación}
+
+\subsubsection{Paso 1: Clonar el Repositorio}
+\begin{lstlisting}[language=bash]
+git clone <URL_DEL_REPOSITORIO>
+cd proyecto_safearea
+\end{lstlisting}
+
+\subsubsection{Paso 2: Instalar Dependencias}
+\begin{lstlisting}[language=bash]
+flutter pub get
+\end{lstlisting}
+
+\subsubsection{Paso 3: Configurar Firebase}
+\begin{enumerate}
+    \item Crear proyecto en Firebase Console
+    \item Habilitar servicios: Authentication, Cloud Firestore, Storage, Cloud Messaging
+    \item Descargar \texttt{google-services.json} → \texttt{android/app/}
+    \item Descargar \texttt{GoogleService-Info.plist} → \texttt{ios/Runner/}
+\end{enumerate}
+
+\subsubsection{Paso 4: Configurar Google Maps}
+\begin{enumerate}
+    \item Obtener API Key en Google Cloud Console
+    \item Habilitar "Maps SDK for Android"
+    \item Agregar en \texttt{android/app/src/main/AndroidManifest.xml}:
+\end{enumerate}
+
+\begin{lstlisting}[language=xml]
+<meta-data
+    android:name="com.google.android.geo.API_KEY"
+    android:value="TU_API_KEY"/>
+\end{lstlisting}
+
+\subsubsection{Paso 5: Ejecutar la Aplicación}
+\begin{lstlisting}[language=bash]
+# Listar dispositivos
+flutter devices
+
+# Ejecutar en dispositivo
+flutter run -d <DEVICE_ID>
+
+# Ejecutar en modo release
+flutter run --release
+\end{lstlisting}
+
+\subsubsection{Paso 6: Generar APK de Producción}
+\begin{lstlisting}[language=bash]
+# APK release
+flutter build apk --release
+
+# Bundle para Play Store
+flutter build appbundle --release
+\end{lstlisting}
+
+\subsection{Índices de Firestore Requeridos}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Colección} & \textbf{Campos} \\
+\hline
+reports & isActive (ASC), createdAt (DESC) \\
+reports & isActive (ASC), type (ASC), createdAt (DESC) \\
+reports & userId (ASC), isActive (ASC), createdAt (DESC) \\
+chatGroups & isPublic (ASC), createdAt (DESC) \\
+\hline
+\end{tabular}
+\caption{Índices compuestos de Firestore}
+\end{table}
+
+% ============================================================================
+% SECCIÓN 8: MANUAL DE USUARIO
+% ============================================================================
+
+\section{Manual de Usuario}
+
+\subsection{Primeros Pasos}
+
+\subsubsection{Registro de Cuenta}
+\begin{enumerate}
+    \item Abre la aplicación SafeArea
+    \item Presiona "Regístrate aquí"
+    \item Completa: Nombre, Correo electrónico, Contraseña (mín. 6 caracteres)
+    \item Presiona "Registrarse"
+\end{enumerate}
+
+\subsubsection{Inicio de Sesión}
+\begin{enumerate}
+    \item Ingresa tu correo electrónico
+    \item Ingresa tu contraseña
+    \item Presiona "Iniciar Sesión"
+\end{enumerate}
+
+\subsection{Pantalla Principal (Home)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Opción} & \textbf{Descripción} \\
+\hline
+Reportes & Ver y crear reportes de incidentes \\
+Chat & Acceder a grupos de chat por zonas \\
+Configuración & Ajustes de la aplicación \\
+Mi Perfil & Ver y editar información personal \\
+\hline
+\end{tabular}
+\caption{Opciones del menú principal}
+\end{table}
+
+\textit{Los administradores verán opciones adicionales: Dashboard y Usuarios}
+
+\subsection{Crear un Reporte}
+
+\begin{enumerate}
+    \item Desde Home, presiona "Reportes"
+    \item Presiona el botón "+" (FAB azul)
+    \item Completa el formulario:
+    \begin{itemize}
+        \item Tipo de incidente: Robo, Incendio, Emergencia, Accidente, Otro
+        \item Título: Descripción breve del incidente
+        \item Descripción: Detalles del incidente
+        \item Ubicación: Selecciona en el mapa
+        \item Imágenes (opcional): Adjunta hasta 3 fotos
+    \end{itemize}
+    \item Presiona "Crear Reporte"
+\end{enumerate}
+
+\subsection{Usar el Chat Comunitario}
+
+\begin{enumerate}
+    \item Desde Home, presiona "Chat"
+    \item Selecciona una zona: Centro, Sur, Norte
+    \item Escribe tu mensaje y presiona enviar
+    \item Puedes adjuntar imágenes con el icono de cámara
+\end{enumerate}
+
+\subsection{Configurar la Aplicación}
+
+\begin{enumerate}
+    \item Desde Home, presiona "Configuración"
+    \item Opciones disponibles:
+    \begin{itemize}
+        \item Notificaciones: Activar/desactivar alertas
+        \item Apariencia: Tema claro, oscuro o automático
+        \item Información: Versión de la app
+        \item Datos: Limpiar caché
+    \end{itemize}
+\end{enumerate}
+
+% ============================================================================
+% SECCIÓN 9: INFORMACIÓN DEL PROYECTO
+% ============================================================================
+
+\section{Información del Proyecto}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Campo} & \textbf{Valor} \\
+\hline
+Nombre & SafeArea \\
+Versión & 0.1.0 \\
+Package & com.newsdevs.safearea \\
+Plataformas & Android, iOS, Web \\
+Idioma & Español \\
+\hline
+\end{tabular}
+\caption{Información del proyecto}
+\end{table}
+
+\vfill
+
+\begin{center}
+\textit{Documentación generada el 27 de Noviembre de 2025}
+\end{center}
+
+\end{document}
