@@ -291,6 +291,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             const Divider(),
 
             // RF-11: Imágenes
+            // 8.3. Implementar galería de imágenes
+            // Implementando la galería de imágenes en el reporte
             if (_report.images.isNotEmpty) ...[
               Text(
                 'Imágenes (${_report.images.length})',
