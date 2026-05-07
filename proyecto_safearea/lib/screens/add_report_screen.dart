@@ -72,6 +72,8 @@ class _AddReportScreenState extends State<AddReportScreen> {
     if (source == null) return;
 
     // Seleccionar imagen
+    // 6.4. Implementar cámara y galería
+    // Captura y selección múltiple funcionando con compresión automática
     final images = await _storageService.pickImage(source: source);
     if (images != null && mounted) {
       setState(() {
@@ -99,6 +101,8 @@ class _AddReportScreenState extends State<AddReportScreen> {
       final reportService = Provider.of<ReportService>(context, listen: false);
 
       // RF-11: Subir imágenes primero
+      // 6.4. Implementar cámara y galería
+      // Captura y selección múltiple funcionando con compresión automática
       List<String> imageUrls = [];
       if (_selectedImages.isNotEmpty) {
         setState(() {
