@@ -1,5 +1,5 @@
-// 8.2. Mostrar información completa del reporte: Pantalla encargada de mostrar la descripción completa, la imagen ampliada y los detalles del incidente.
-// 8.5. Mostrar datos del autor: Componente visual donde se reserva el espacio para mostrar el nombre y foto del usuario que reportó.
+// 8.2. Mostrar informacion completa del reporte: Pantalla encargada de mostrar la descripcion completa, la imagen ampliada y los detalles del incidente.
+// 8.5. Mostrar datos del autor: Componente visual donde se reserva el espacio para mostrar el nombre y foto del usuario que reporto.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

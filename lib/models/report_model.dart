@@ -1,5 +1,5 @@
-// 8.2. Mostrar información completa del reporte: Proporciona el mapeo de todos los campos necesarios que se mostrarán en la pantalla de detalle.
-// 8.5. Mostrar datos del autor: Modelo que permite identificar el ID del creador para vincular su información con el reporte específico.
+// 8.2. Mostrar informacion completa del reporte: Proporciona el mapeo de todos los campos necesarios que se mostraran en la pantalla de detalle.
+// 8.5. Mostrar datos del autor: Modelo que permite identificar el ID del creador para vincular su informacion con el reporte especifico.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 

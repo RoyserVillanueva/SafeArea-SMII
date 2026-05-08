@@ -1,4 +1,4 @@
-// 8.5. Mostrar datos del autor: Estructura de datos necesaria para procesar y mostrar la información del perfil del usuario autor.
+// 8.5. Mostrar datos del autor: Estructura de datos necesaria para procesar y mostrar la informacion del perfil del usuario autor.
 
 import 'package:flutter/foundation.dart';
 
