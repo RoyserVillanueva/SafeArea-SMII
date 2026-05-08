@@ -1,3 +1,5 @@
+// 10.1 Agregar la edicion y eliminacion (aun en prueba) de los detalles del reporte
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
@@ -278,7 +280,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
     final expirationTime = widget.report.createdAt.add(const Duration(hours: 24));
     final hoursSinceExpiration = now.difference(expirationTime).inHours;
     final daysSinceExpiration = now.difference(expirationTime).inDays;
-
+    // Diseños de la pantalla de edicion
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar Reporte'),
