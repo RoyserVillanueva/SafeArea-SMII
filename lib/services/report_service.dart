@@ -1,4 +1,4 @@
-// 7.4. Mostrar reportes en orden cronológico: Aplica el filtro de ordenamiento (orderBy) al traer los datos desde Firestore.
+// 7.4. Mostrar reportes en orden cronologico: Aplica el filtro de ordenamiento (orderBy) al traer los datos desde Firestore.
 
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

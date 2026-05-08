@@ -1,4 +1,4 @@
-// 6.6. Subir imágenes a Storage: Archivo donde el usuario selecciona la imagen de su galería e invoca el servicio de subida.
+// 6.6. Subir imagenes a Storage: Archivo donde el usuario selecciona la imagen de su galeria e invoca el servicio de subida.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

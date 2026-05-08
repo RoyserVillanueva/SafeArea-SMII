@@ -1,4 +1,4 @@
-// 6.6. Subir imágenes a Storage: Contiene la función específica para cargar archivos binarios a Firebase Storage.
+// 6.6. Subir imagenes a Storage: Contiene la funcion especifica para cargar archivos binarios a Firebase Storage.
 
 import 'dart:io';
 import 'dart:convert';

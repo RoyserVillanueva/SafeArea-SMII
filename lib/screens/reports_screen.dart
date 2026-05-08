@@ -1,4 +1,4 @@
-// 7.4. Mostrar reportes en orden cronológico: Widget que recibe la colección de datos ya ordenados y los renderiza en un ListView.
+// 7.4. Mostrar reportes en orden cronologico: Widget que recibe la coleccion de datos ya ordenados y los renderiza en un ListView.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
