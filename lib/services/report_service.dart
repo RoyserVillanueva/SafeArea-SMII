@@ -1,6 +1,7 @@
 // 7.4. Mostrar reportes en orden cronologico: Aplica el filtro de ordenamiento (orderBy) al traer los datos desde Firestore.
 // 9.5. Guardar preferencias de filtro: Lógica para persistir los criterios de búsqueda y filtrado de reportes.
 // 10.2. Validar que solo el autor pueda modificar: Verificación de seguridad antes de procesar actualizaciones en la base de datos.
+// 10.4. Implementar eliminación con confirmación: Función que ejecuta la eliminación física o lógica en Firestore tras la confirmación.
 
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

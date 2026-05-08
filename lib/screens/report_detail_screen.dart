@@ -1,6 +1,7 @@
 // 8.2. Mostrar informacion completa del reporte: Pantalla encargada de mostrar la descripcion completa, la imagen ampliada y los detalles del incidente.
 // 8.5. Mostrar datos del autor: Componente visual donde se reserva el espacio para mostrar el nombre y foto del usuario que reporto.
 // 10.2. Validar que solo el autor pueda modificar: Lógica en la UI para ocultar o mostrar botones de edición según el UID.
+// 10.4. Implementar eliminación con confirmación: Implementación del cuadro de diálogo (AlertDialog) para confirmar la baja del reporte.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
