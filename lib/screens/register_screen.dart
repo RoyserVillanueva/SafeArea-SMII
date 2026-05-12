@@ -1,3 +1,5 @@
+// 1 - Tarea 2: Diseñar pantalla de registro
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
