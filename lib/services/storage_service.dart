@@ -3,6 +3,7 @@
 // 12.2. Integrar envío a Firestore o algún otro servicio
 // 12.4 Implementación de imagenes a Storage
 // Se estara utilizando Cloudinary
+// 5.2. Implementar la carga de foto de perfil: Lógica para subir y obtener la URL de la imagen de perfil del usuario.
 
 import 'dart:io';
 import 'dart:convert';

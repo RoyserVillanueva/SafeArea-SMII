@@ -1,6 +1,8 @@
 // 11.4. Cargar historial de mensajes: Función que realiza el streaming de datos o la consulta de mensajes previos en la conversación.
 // 12.6. Mostrar mensajes en burbujas
 // 13.5. Sincronizar al reconectar
+// 12.5. Escuchar mensajes en tiempo real: Configuración de Streams mediante snapshots() para recibir actualizaciones inmediatas del chat.
+// 13.4. Mantener historial localmente: Lógica de gestión de estado o persistencia local para el almacenamiento temporal de la conversación.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';

@@ -1,5 +1,6 @@
 // 6.4. Implementar cámara y galería
 // 6.6. Subir imagenes a Storage: Archivo donde el usuario selecciona la imagen de su galeria e invoca el servicio de subida.
+// 6.5. Guardar reporte en Firestore: Acción del botón que invoca el servicio de guardado tras validar el formulario e imágenes.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

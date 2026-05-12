@@ -1,4 +1,5 @@
 // 1 - Tarea 2: Dise√±ar pantalla de registro
+// 1.5. Probar flujo de registro completo: Pruebas de integraci®Æn de la interfaz con el servicio de autenticaci®Æn.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
