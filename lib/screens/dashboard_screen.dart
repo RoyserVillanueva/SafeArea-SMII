@@ -1,3 +1,5 @@
+// 3.4. Probar el flujo del dashboard y redirecciones: Pruebas de navegación interna y visualización de módulos principales.
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
