@@ -1,5 +1,5 @@
-// 8.2. Mostrar informacion completa del reporte: Pantalla encargada de mostrar la descripcion completa, la imagen ampliada y los detalles del incidente.
-// 8.5. Mostrar datos del autor: Componente visual donde se reserva el espacio para mostrar el nombre y foto del usuario que reporto.
+// 8.2. Mostrar informacion completa del reporte: Pantalla encargada de mostrar la descripcion completa, la imagen ampliada y los detalles del incidente. (Completado)
+// 8.5. Mostrar datos del autor: Componente visual donde se reserva el espacio para mostrar el nombre y foto del usuario que reporto. (Completado)
 // 10.2. Validar que solo el autor pueda modificar: Lógica en la UI para ocultar o mostrar botones de edición según el UID.
 // 10.4. Implementar eliminación con confirmación: Implementación del cuadro de diálogo (AlertDialog) para confirmar la baja del reporte.
 
@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/report_service.dart';
 import '../models/report_model.dart';
+import '../models/user_model.dart'; // 🔐 NUEVA IMPORTACIÓN : 8.5 Mostrar Datos del autor
 import 'edit_report_screen.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -23,11 +24,26 @@ class ReportDetailScreen extends StatefulWidget {
 
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
   late Report _report;
+  UserModel? _author; // 🔐 NUEVO: Almacenar datos del autor
+  bool _isLoadingAuthor = true; // 🔐 NUEVO: Estado de carga
 
   @override
   void initState() {
     super.initState();
     _report = widget.report;
+    _loadAuthor(); // 🔐 NUEVO: Cargar datos del autor
+  }
+
+  // 🔐 NUEVO: Método para cargar los datos del autor
+  Future<void> _loadAuthor() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final author = await authService.getUserById(_report.userId);
+    if (mounted) {
+      setState(() {
+        _author = author;
+        _isLoadingAuthor = false;
+      });
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -63,7 +79,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
-  // 8.4 Integrar mapa con ubicacion del incidente
+
   String _maskedLocation(String location) {
     final noDigits = location.replaceAll(RegExp(r'[0-9]'), '');
     final parts = noDigits.split(',');
@@ -97,7 +113,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             },
       style: OutlinedButton.styleFrom(
         side: BorderSide(
-          // Siempre usar naranja para el estado seleccionado
           color: _report.status == status 
               ? Colors.orange 
               : Theme.of(context).colorScheme.outlineVariant,
@@ -109,7 +124,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       child: Text(
         status.replaceAll('_', ' ').toUpperCase(),
         style: TextStyle(
-          // Texto naranja cuando está seleccionado
           color: _report.status == status 
               ? Colors.orange 
               : Theme.of(context).colorScheme.onSurfaceVariant,
@@ -129,7 +143,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     final bool isOwner = authService.currentUser?.id == _report.userId;
 
     final bool isAdmin = authService.currentUser?.isAdmin ?? false;
-    // RF-17: Los administradores pueden moderar cualquier reporte
     final bool canModerate = isAdmin || isOwner;
 
     return Scaffold(
@@ -245,7 +258,78 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 8.4 Integrar mapa con Ubicación del incidente
+            // 🔐 NUEVO: Datos del autor (8.5)
+            if (_isLoadingAuthor)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Center(child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )),
+              )
+            else if (_author != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    // Foto de perfil del autor
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundImage: (_author!.profileImage != null && _author!.profileImage!.isNotEmpty)
+                          ? NetworkImage(_author!.profileImage!)
+                          : null,
+                      child: (_author!.profileImage == null || _author!.profileImage!.isEmpty)
+                          ? Icon(Icons.person, size: 20, color: colorScheme.onSurfaceVariant)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    // Nombre del autor
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reportado por',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Text(
+                            _author!.name,
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Badge de verificación si es administrador
+                    if (_author!.isAdmin)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Admin',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
+
+            // Ubicación
             ListTile(
               leading: Icon(Icons.location_on, color: colorScheme.error),
               title: const Text('Ubicación'),
@@ -295,9 +379,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             ),
             const Divider(),
 
-            // RF-11: Imágenes
-            // 8.3. Implementar galería de imágenes
-            // Implementando la galería de imágenes en el reporte
+            // Galería de imágenes (8.3)
             if (_report.images.isNotEmpty) ...[
               Text(
                 'Imágenes (${_report.images.length})',
@@ -319,7 +401,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                         borderRadius: BorderRadius.circular(12),
                         child: GestureDetector(
                           onTap: () {
-                            // Mostrar imagen en pantalla completa
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -370,7 +451,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             ),
             const Divider(),
 
-            // RF-17: Gestión de estados - Moderación (admins pueden moderar cualquier reporte)
+            // Cambio de estado (moderación)
             if (canModerate) ...[
               const SizedBox(height: 12),
               Row(

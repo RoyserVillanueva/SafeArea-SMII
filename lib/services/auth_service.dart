@@ -359,33 +359,71 @@ class AuthService with ChangeNotifier {
   }
 
   Future<String?> updateProfile(String name, String? phone, {String? profileImage}) async {
-    try {
-      if (_currentUser == null) return 'No hay usuario logueado';
-
-      final updatedUser = UserModel( 
-        id: _currentUser!.id,
-        email: _currentUser!.email,
-        name: name,
-        phone: phone,
-        profileImage: profileImage,
-        createdAt: _currentUser!.createdAt,
-        role: _currentUser!.role, // RF-16: Mantener role
-        isActive: _currentUser!.isActive, // RF-16: Mantener estado activo
-      );
-
-      await _firestore.collection('users').doc(_currentUser!.id).update({
-        'name': name,
-        'phone': phone,
-        'profileImage': profileImage,
-      });
-
-      _currentUser = updatedUser;
-      notifyListeners();
-      return null;
-    } catch (e) {
-      return 'Error al actualizar perfil: $e';
+  try {
+    if (_currentUser == null) return 'No hay usuario logueado';
+    // 🔐 VALIDACIÓN DE UNICIDAD: Verificar si el teléfono ya está en uso por otro usuario
+    if (phone != null && phone.isNotEmpty) {
+      final existingUser = await _firestore
+          .collection('users')
+          .where('phone', isEqualTo: phone)
+          .limit(1)
+          .get();
+      
+      // Si existe un usuario con este teléfono y NO es el usuario actual
+      if (existingUser.docs.isNotEmpty && existingUser.docs.first.id != _currentUser!.id) {
+        return 'Este número de teléfono ya está registrado por otro usuario';
+      }
     }
+
+    // 🔐 ACTUALIZAR EN FIREBASE AUTH (si el teléfono cambió)
+    if (phone != null && phone.isNotEmpty && phone != _currentUser!.phone) {
+      final user = _auth.currentUser;
+      if (user != null) {
+        // Nota: Firebase Auth no permite actualizar el número de teléfono directamente
+        // Esto debe hacerse mediante verificación SMS (Phone Verification)
+        // Por ahora solo actualizamos en Firestore
+        // El número verificado se actualizará cuando el usuario complete la verificación SMS
+      }
+    }
+
+    // Crear usuario actualizado
+    final updatedUser = UserModel( 
+      id: _currentUser!.id,
+      email: _currentUser!.email,
+      name: name,
+      phone: phone,
+      profileImage: profileImage,
+      createdAt: _currentUser!.createdAt,
+      role: _currentUser!.role,
+      isActive: _currentUser!.isActive,
+    );
+
+    // Actualizar en Firestore
+    final updateData = <String, dynamic>{
+      'name': name,
+      'profileImage': profileImage,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    
+    // Solo incluir teléfono si no es null (si es null, mantener el existente o eliminarlo)
+    if (phone != null) {
+      updateData['phone'] = phone;
+    } else {
+      updateData['phone'] = FieldValue.delete();
+    }
+
+    await _firestore.collection('users').doc(_currentUser!.id).update(updateData);
+
+    // Actualizar modelo local
+    _currentUser = updatedUser;
+    notifyListeners();
+    
+    return null;
+  } catch (e) {
+    debugPrint('Error al actualizar perfil: $e');
+    return 'Error al actualizar perfil: $e';
   }
+}
 
   // Método para obtener usuario por ID
   Future<UserModel?> getUserById(String userId) async {

@@ -1,12 +1,14 @@
 // 7.4. Mostrar reportes en orden cronologico: Aplica el filtro de ordenamiento (orderBy) al traer los datos desde Firestore.
+// 9.3 Implementación de selector de distancia
 // 9.5. Guardar preferencias de filtro: Lógica para persistir los criterios de búsqueda y filtrado de reportes.
 // 10.2. Validar que solo el autor pueda modificar: Verificación de seguridad antes de procesar actualizaciones en la base de datos.
 // 10.4. Implementar eliminación con confirmación: Función que ejecuta la eliminación física o lógica en Firestore tras la confirmación.
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/report_model.dart';
 import 'notification_service.dart';
+import 'location_service.dart';
 
 class ReportService with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -18,6 +20,32 @@ class ReportService with ChangeNotifier {
   String get selectedFilter => _selectedFilter;
   String get selectedStatus => _selectedStatus;
 
+  // 🔐 NUEVO: Constructor que carga los filtros guardados
+  ReportService() {
+    _loadSavedFilters();
+  }
+
+  // 🔐 NUEVO: Cargar filtros desde SharedPreferences
+  // 9.5 Persistencia de Filtros
+  Future<void> _loadSavedFilters() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedFilter = prefs.getString('selected_filter');
+      final savedStatus = prefs.getString('selected_status');
+      
+      if (savedFilter != null && savedFilter.isNotEmpty) {
+        _selectedFilter = savedFilter;
+      }
+      if (savedStatus != null && savedStatus.isNotEmpty) {
+        _selectedStatus = savedStatus;
+      }
+      notifyListeners();
+      debugPrint('📦 Filtros cargados: filter=$_selectedFilter, status=$_selectedStatus');
+    } catch (e) {
+      debugPrint('Error loading filters: $e');
+    }
+  }
+
   // RF-05: Crear reporte
   Future<String?> createReport({
     required String userId,
@@ -27,14 +55,13 @@ class ReportService with ChangeNotifier {
     required String location,
     double? latitude,
     double? longitude,
-    List<String>? images, // RF-11: Soporte para imágenes
+    List<String>? images,
   }) async {
     try {
       _isLoading = true;
       notifyListeners();
 
       final docRef = _firestore.collection('reports').doc();
-      // Usar timestamp ISO para evitar problemas con índices
       final now = DateTime.now();
       await docRef.set({
         'id': docRef.id,
@@ -44,8 +71,8 @@ class ReportService with ChangeNotifier {
         'description': description,
         'location': location,
         'status': 'activo',
-        'images': images ?? <String>[], // RF-11: URLs de imágenes
-        'createdAt': now.toIso8601String(), // Guardar como String ISO para evitar problemas con índices
+        'images': images ?? <String>[],
+        'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
         'verifiedBy': <String>[],
         'isActive': true,
@@ -53,13 +80,12 @@ class ReportService with ChangeNotifier {
         if (longitude != null) 'longitude': longitude,
       });
 
-      // Enviar notificación automática a todos los usuarios
       NotificationService.sendNewReportNotification(
         reportId: docRef.id,
         reportTitle: title,
         reportType: type,
         creatorUserId: userId,
-        imageUrl: (images?.isNotEmpty ?? false) ? images!.first : null, // RF-11: Primera imagen como preview
+        imageUrl: (images?.isNotEmpty ?? false) ? images!.first : null,
       );
 
       _isLoading = false;
@@ -78,7 +104,6 @@ class ReportService with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      // RN-03: Solo permitir edición dentro de las primeras 24 horas
       final now = DateTime.now();
       final hoursSinceCreation = now.difference(report.createdAt).inHours;
       if (hoursSinceCreation > 24) {
@@ -87,14 +112,11 @@ class ReportService with ChangeNotifier {
         return 'Solo puedes editar el reporte dentro de las primeras 24 horas de creado';
       }
 
-      final updatedReport = report.copyWith(
-        updatedAt: now,
-      );
+      final updatedReport = report.copyWith(updatedAt: now);
 
-      // Actualizar con formato ISO para mantener consistencia
       await _firestore.collection('reports').doc(report.id).update({
         ...updatedReport.toMap(),
-        'updatedAt': now.toIso8601String(), // Asegurar formato ISO
+        'updatedAt': now.toIso8601String(),
       });
 
       _isLoading = false;
@@ -110,13 +132,11 @@ class ReportService with ChangeNotifier {
   // RF-07: Cambiar estado
   Future<String?> changeReportStatus(String reportId, String newStatus) async {
     try {
-      // Obtener el reporte para enviar notificación al dueño
       final reportDoc = await _firestore.collection('reports').doc(reportId).get();
       if (reportDoc.exists) {
         final data = reportDoc.data()!;
         final report = Report.fromMap(data);
         
-        // Enviar notificación al dueño del reporte
         NotificationService.sendReportStatusChangeNotification(
           reportId: reportId,
           reportTitle: report.title,
@@ -129,7 +149,7 @@ class ReportService with ChangeNotifier {
       final now = DateTime.now();
       await _firestore.collection('reports').doc(reportId).update({
         'status': newStatus,
-        'updatedAt': now.toIso8601String(), // Mantener formato ISO
+        'updatedAt': now.toIso8601String(),
       });
       return null;
     } catch (e) {
@@ -143,15 +163,10 @@ class ReportService with ChangeNotifier {
     
     Query query = reportsRef.where('isActive', isEqualTo: true);
 
-    // Aplicar filtros
-    // Nota: Si usamos múltiples where + orderBy, Firestore puede requerir índice compuesto
-    // Para evitar esto, aplicamos solo un filtro a la vez si ambos están presentes
     bool hasTypeFilter = typeFilter != null && typeFilter != 'todos';
     bool hasStatusFilter = statusFilter != null && statusFilter != 'todos';
 
     if (hasTypeFilter && hasStatusFilter) {
-      // Si hay ambos filtros, aplicar solo uno y filtrar el otro en el cliente
-      // Aplicamos typeFilter (más específico) y filtramos status en el cliente
       query = query.where('type', isEqualTo: typeFilter);
     } else if (hasTypeFilter) {
       query = query.where('type', isEqualTo: typeFilter);
@@ -159,7 +174,6 @@ class ReportService with ChangeNotifier {
       query = query.where('status', isEqualTo: statusFilter);
     }
 
-    // Ordenar por createdAt (como String ISO funciona bien)
     return query.orderBy('createdAt', descending: true).snapshots();
   }
 
@@ -187,15 +201,33 @@ class ReportService with ChangeNotifier {
     }
   }
 
-  // Cambiar filtros
-  void setFilter(String filter) {
+  // 🔐 MEJORADO: Cambiar filtros con persistencia
+  void setFilter(String filter) async {
     _selectedFilter = filter;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_filter', filter);
     notifyListeners();
+    debugPrint('📦 Filtro guardado: filter=$filter');
   }
 
-  void setStatusFilter(String status) {
+  // 🔐 MEJORADO: Cambiar filtro de estado con persistencia
+  void setStatusFilter(String status) async {
     _selectedStatus = status;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_status', status);
     notifyListeners();
+    debugPrint('📦 Estado guardado: status=$status');
+  }
+
+  // 🔐 NUEVO: Método para limpiar filtros guardados
+  Future<void> clearSavedFilters() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('selected_filter');
+    await prefs.remove('selected_status');
+    _selectedFilter = 'todos';
+    _selectedStatus = 'todos';
+    notifyListeners();
+    debugPrint('📦 Filtros limpiados');
   }
 
   // RF-17: Eliminación lógica de reportes
@@ -240,4 +272,57 @@ class ReportService with ChangeNotifier {
       return 'Error al sembrar reportes: $e';
     }
   }
+  // 9.3 Distancia
+      // 🔐 NUEVO: Filtrar reportes por distancia (después de obtenerlos)
+    Future<List<Report>> filterReportsByDistance({
+      required List<Report> reports,
+      required double? maxDistanceKm,
+    }) async {
+      // Si no hay filtro de distancia, devolver todos
+      if (maxDistanceKm == null || maxDistanceKm <= 0) {
+        return reports;
+      }
+
+      // Obtener ubicación actual del usuario
+      final position = await LocationService.getCurrentLocation();
+      if (position == null) {
+        debugPrint('⚠️ No se pudo obtener ubicación para filtrar por distancia');
+        return reports;
+      }
+
+      final userLat = position.latitude;
+      final userLon = position.longitude;
+
+      // Filtrar reportes por distancia
+      final filteredReports = reports.where((report) {
+        if (report.latitude == null || report.longitude == null) {
+          return false; // Reportes sin coordenadas no se incluyen
+        }
+        
+        return LocationService.isWithinRadius(
+          userLat, userLon,
+          report.latitude!, report.longitude!,
+          maxDistanceKm,
+        );
+      }).toList();
+
+      debugPrint('📍 Filtro de distancia: ${reports.length} → ${filteredReports.length} reportes (radio: ${maxDistanceKm}km)');
+      
+      return filteredReports;
+    }
+
+    /// Verificar si un reporte está dentro del radio de distancia del usuario
+    Future<bool> isReportWithinRadius(Report report, double maxDistanceKm) async {
+      if (maxDistanceKm == null || maxDistanceKm <= 0) return true;
+      if (report.latitude == null || report.longitude == null) return false;
+      
+      final position = await LocationService.getCurrentLocation();
+      if (position == null) return true; // Si no hay ubicación, mostrar todos
+      
+      return LocationService.isWithinRadius(
+        position.latitude, position.longitude,
+        report.latitude!, report.longitude!,
+        maxDistanceKm,
+      );
+    }
 }
