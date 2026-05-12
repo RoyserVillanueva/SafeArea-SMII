@@ -1,3 +1,5 @@
+// 1.5. Probar flujo de registro completo: Validación de la creación de usuarios y persistencia en Firebase Auth.
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
