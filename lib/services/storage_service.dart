@@ -1,4 +1,5 @@
 // 6.6. Subir imagenes a Storage: Contiene la funcion especifica para cargar archivos binarios a Firebase Storage.
+// 8.3. Implementar galería de imágenes
 // 12.2. Integrar envío a Firestore o algún otro servicio
 // 12.4 Implementación de imagenes a Storage
 // Se estara utilizando Cloudinary
