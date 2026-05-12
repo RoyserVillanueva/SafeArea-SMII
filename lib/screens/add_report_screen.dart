@@ -1,3 +1,4 @@
+// 6.4. Implementar cámara y galería
 // 6.6. Subir imagenes a Storage: Archivo donde el usuario selecciona la imagen de su galeria e invoca el servicio de subida.
 
 import 'package:flutter/material.dart';
