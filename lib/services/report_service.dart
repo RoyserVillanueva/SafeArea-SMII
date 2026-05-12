@@ -3,6 +3,9 @@
 // 9.5. Guardar preferencias de filtro: Lógica para persistir los criterios de búsqueda y filtrado de reportes.
 // 10.2. Validar que solo el autor pueda modificar: Verificación de seguridad antes de procesar actualizaciones en la base de datos.
 // 10.4. Implementar eliminación con confirmación: Función que ejecuta la eliminación física o lógica en Firestore tras la confirmación.
+// 6.5. Guardar reporte en Firestore: Lógica para enviar el objeto mapeado del reporte a la colección de Cloud Firestore.
+// 7.5. Implementar scroll infinito: Lógica de paginación en la consulta usando límites (limit) y documentos de inicio (startAfter).
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
