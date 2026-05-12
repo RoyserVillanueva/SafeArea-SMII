@@ -1,4 +1,5 @@
 // 8.5. Mostrar datos del autor: Estructura de datos necesaria para procesar y mostrar la informacion del perfil del usuario autor.
+// 5.3. Implementar edición de datos del usuario: Estructura de datos que permite la mutabilidad de los campos del perfil.
 
 import 'package:flutter/foundation.dart';
 

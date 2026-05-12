@@ -1,4 +1,6 @@
 // 5.5. Validar unicidad de campos
+// 5.2. Implementar la carga de foto de perfil: Interfaz para la selección y previsualización de la nueva foto de usuario.
+// 5.3. Implementar edición de datos del usuario: Formulario de edición con controladores para actualizar la información personal.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
