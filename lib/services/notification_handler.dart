@@ -1,3 +1,5 @@
+// 14.6. Manejar al presionar notificación: Lógica para interceptar el click en la notificación y definir la ruta de navegación correspondiente.
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
