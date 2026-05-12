@@ -1,4 +1,5 @@
 // 11.4. Cargar historial de mensajes: Función que realiza el streaming de datos o la consulta de mensajes previos en la conversación.
+// 12.6. Mostrar mensajes en burbujas
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
