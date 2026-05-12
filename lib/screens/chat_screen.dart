@@ -1,5 +1,6 @@
 // 11.4. Cargar historial de mensajes: Widget encargado de renderizar la lista de mensajes recuperados cronológicamente.
-
+// 12.3 Implementar adjunto de imagénes 
+// 12.4 Subir imagenes a storage
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -76,7 +77,7 @@ class _ChatMessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
-            // RF-11: Mostrar imagen si existe
+            // RF-11: Mostrar imagen si existe || 12.3 Implementar adjunto de imagenes
             if (imageUrl != null && imageUrl!.isNotEmpty) ...[
               GestureDetector(
                 onTap: () {

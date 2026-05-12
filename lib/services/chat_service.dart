@@ -208,7 +208,7 @@ class ChatService with ChangeNotifier {
     required String userName,
     String? text,
     String? groupId,
-    String? imageUrl, // RF-11: URL de imagen
+    String? imageUrl, // RF-11: URL de imagen | | 12.3 Implementar adjunto de imagen
   }) async {
     try {
       // Validar que haya al menos texto o imagen
@@ -227,7 +227,7 @@ class ChatService with ChangeNotifier {
         'userId': userId,
         'userName': userName,
         'text': text?.trim() ?? '',
-        'imageUrl': imageUrl, // RF-11: URL de imagen
+        'imageUrl': imageUrl, // RF-11: URL de imagen // 12.3 Implementar adjunto de imagen
         'createdAt': DateTime.now().toIso8601String(),
         'groupId': targetGroupId,
       });
