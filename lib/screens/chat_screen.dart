@@ -1,7 +1,7 @@
-// 11.4. Cargar historial de mensajes: Widget encargado de renderizar la lista de mensajes recuperados cronológicamente.
+// 11.4. Cargar historial de mensajes
 // 12.3 Implementar adjunto de imagénes 
 // 12.4 Subir imagenes a storage
-// 12.5. Escuchar mensajes en tiempo real: Implementación de StreamBuilder para reconstruir la UI automáticamente al recibir mensajes nuevos.
+// 12.5. Escuchar mensajes en tiempo real
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

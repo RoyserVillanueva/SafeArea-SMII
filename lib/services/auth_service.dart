@@ -1,7 +1,7 @@
-// 1.5. Probar flujo de registro completo: Validación de la creación de usuarios y persistencia en Firebase Auth.
-// 4.6. Probar con números reales: Validación del flujo de Phone Auth con dispositivos y números reales (OTP).
-// 5.4. Conectar con Firestore para guardar datos: Función para actualizar el documento del usuario en la colección 'users'.
-// 5.5. Validar unicidad de campos: Lógica de consulta previa en Firestore para evitar registros duplicados de campos críticos.
+// 1.5. Probar flujo de registro completo
+// 4.6. Probar con números reales
+// 5.4. Conectar con Firestore para guardar datos
+// 5.5. Validar unicidad de campos
 // 17.5. Registrar acciones en logs
 
 import 'dart:async';

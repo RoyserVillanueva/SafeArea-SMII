@@ -1,9 +1,9 @@
-// 6.6. Subir imagenes a Storage: Contiene la funcion especifica para cargar archivos binarios a Firebase Storage.
+// 6.6. Subir imagenes a Storage
 // 8.3. Implementar galería de imágenes
 // 12.2. Integrar envío a Firestore o algún otro servicio
 // 12.4 Implementación de imagenes a Storage
 // Se estara utilizando Cloudinary
-// 5.2. Implementar la carga de foto de perfil: Lógica para subir y obtener la URL de la imagen de perfil del usuario.
+// 5.2. Implementar la carga de foto de perfil
 
 import 'dart:io';
 import 'dart:convert';

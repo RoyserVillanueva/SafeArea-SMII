@@ -1,6 +1,6 @@
-// 8.2. Mostrar informacion completa del reporte: Proporciona el mapeo de todos los campos necesarios que se mostraran en la pantalla de detalle.
-// 8.5. Mostrar datos del autor: Modelo que permite identificar el ID del creador para vincular su informacion con el reporte especifico.
-// 10.2. Validar que solo el autor pueda modificar: Definición del campo authorId para la comprobación de propiedad.
+// 8.2. Mostrar informacion completa del reporte
+// 8.5. Mostrar datos del autor
+// 10.2. Validar que solo el autor pueda modificar
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 

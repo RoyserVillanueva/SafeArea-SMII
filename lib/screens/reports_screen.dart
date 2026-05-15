@@ -1,7 +1,7 @@
-// 7.4. Mostrar reportes en orden cronologico: Widget que recibe la coleccion de datos ya ordenados y los renderiza en un ListView.
-// 9.5. Guardar preferencias de filtro: Interfaz que captura y aplica las preferencias guardadas por el usuario.
+// 7.4. Mostrar reportes en orden cronologico
+// 9.5. Guardar preferencias de filtro
 // 10.5. Actualizar lista tras cambios
-// 7.5. Implementar scroll infinito: Uso de ScrollController para detectar el final de la lista y disparar la carga de nuevos elementos.
+// 7.5. Implementar scroll infinito
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

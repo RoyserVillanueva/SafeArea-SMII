@@ -1,10 +1,10 @@
-// 7.4. Mostrar reportes en orden cronologico: Aplica el filtro de ordenamiento (orderBy) al traer los datos desde Firestore.
+// 7.4. Mostrar reportes en orden cronologico
 // 9.3 Implementación de selector de distancia
-// 9.5. Guardar preferencias de filtro: Lógica para persistir los criterios de búsqueda y filtrado de reportes.
-// 10.2. Validar que solo el autor pueda modificar: Verificación de seguridad antes de procesar actualizaciones en la base de datos.
-// 10.4. Implementar eliminación con confirmación: Función que ejecuta la eliminación física o lógica en Firestore tras la confirmación.
-// 6.5. Guardar reporte en Firestore: Lógica para enviar el objeto mapeado del reporte a la colección de Cloud Firestore.
-// 7.5. Implementar scroll infinito: Lógica de paginación en la consulta usando límites (limit) y documentos de inicio (startAfter).
+// 9.5. Guardar preferencias de filtro
+// 10.2. Validar que solo el autor pueda modificar
+// 10.4. Implementar eliminación con confirmación
+// 6.5. Guardar reporte en Firestore
+// 7.5. Implementar scroll infinito
 // 16.3. Implementar gráfico de reportes por día
 // 17.5. Registrar acciones en logs
 

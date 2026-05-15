@@ -1,4 +1,4 @@
-// 3.4. Probar el flujo del dashboard y redirecciones: Pruebas de navegación interna y visualización de módulos principales.
+// 3.4. Probar el flujo del dashboard y redirecciones
 // 16.3. Implementar gráfico de reportes por día
 
 import 'package:flutter/material.dart';

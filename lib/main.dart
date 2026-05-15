@@ -8,8 +8,8 @@
 // Las pantallas siguientes solo mostraran funcionalidad simple. 
 // Se completo el login con email y contrasenna (User Story 2).
 // Se validaron satisfactoriamente los flujos de Registro (User Story 1)
-// 3.4. Probar el flujo del dashboard y redirecciones: Verificación de rutas iniciales y guards de autenticación.
-// 14.6. Manejar al presionar notificación: Configuración del navigatorKey para permitir redirecciones desde el handler de notificaciones.
+// 3.4. Probar el flujo del dashboard y redirecciones
+// 14.6. Manejar al presionar notificación
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';

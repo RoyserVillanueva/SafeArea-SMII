@@ -1,4 +1,4 @@
-// 14.6. Manejar al presionar notificación: Lógica para interceptar el click en la notificación y definir la ruta de navegación correspondiente.
+// 14.6. Manejar al presionar notificación
 // 15.5. Filtrar notificaciones según preferencias
 
 import 'package:firebase_messaging/firebase_messaging.dart';
