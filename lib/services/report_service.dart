@@ -172,7 +172,9 @@ class ReportService with ChangeNotifier {
     bool hasStatusFilter = statusFilter != null && statusFilter != 'todos';
 
     if (hasTypeFilter && hasStatusFilter) {
-      query = query.where('type', isEqualTo: typeFilter);
+      query = query
+          .where('type', isEqualTo: typeFilter)
+          .where('status', isEqualTo: statusFilter);
     } else if (hasTypeFilter) {
       query = query.where('type', isEqualTo: typeFilter);
     } else if (hasStatusFilter) {

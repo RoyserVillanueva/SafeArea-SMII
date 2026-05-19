@@ -67,15 +67,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _loadInitialReports() async {
     setState(() {
-      _isLoading = true;
+      // No marcar _isLoading aquí: _loadMoreReports controla su propio estado.
       _reports.clear();
       _lastDocument = null;
       _hasMore = true;
       _filteredReportsByDistance.clear(); // 🔐 Limpiar filtro de distancia
     });
-    
+
     await _loadMoreReports();
-    
+
     setState(() {
       _isInitialLoad = false;
     });

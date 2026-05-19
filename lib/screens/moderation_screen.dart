@@ -1,4 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+import '../models/report_model.dart';
+import '../widgets/report_card.dart';
+import 'report_detail_screen.dart';
 
 class ModerationScreen extends StatelessWidget {
   const ModerationScreen({Key? key}) : super(key: key);
@@ -20,10 +25,18 @@ class ModerationScreen extends StatelessWidget {
         ),
         body: const TabBarView(
           children: [
-            // Vista 1: Reportes Pendientes
-            _PendingReportsList(),
-            // Vista 2: Reportes ya resueltos
-            _ResolvedReportsList(),
+            _ModerationReportsList(
+              title: 'Reportes pendientes',
+              emptyMessage: 'No hay reportes pendientes por revisar.',
+              statusFilters: ['activo', 'en_proceso'],
+              emptyIcon: Icons.inbox_outlined,
+            ),
+            _ModerationReportsList(
+              title: 'Historial de reportes',
+              emptyMessage: 'No hay reportes resueltos aún.',
+              statusFilters: ['resuelto'],
+              emptyIcon: Icons.done_all_outlined,
+            ),
           ],
         ),
       ),
@@ -31,71 +44,161 @@ class ModerationScreen extends StatelessWidget {
   }
 }
 
-class _PendingReportsList extends StatelessWidget {
-  const _PendingReportsList({Key? key}) : super(key: key);
+class _ModerationReportsList extends StatelessWidget {
+  final String title;
+  final String emptyMessage;
+  final List<String> statusFilters;
+  final IconData emptyIcon;
+
+  const _ModerationReportsList({
+    required this.title,
+    required this.emptyMessage,
+    required this.statusFilters,
+    required this.emptyIcon,
+  });
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _buildReportsStream() {
+    try {
+      final query = FirebaseFirestore.instance
+          .collection('reports')
+          .where('isActive', isEqualTo: true)
+          .where('status', whereIn: statusFilters)
+          .orderBy('createdAt', descending: true);
+
+      return query.snapshots().handleError((Object error, StackTrace stackTrace) {
+        debugPrint('🔥 Firestore error en "$title": $error');
+        debugPrintStack(stackTrace: stackTrace);
+        throw error;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('🔥 Error construyendo query en "$title": $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return Stream<QuerySnapshot<Map<String, dynamic>>>.error(error, stackTrace);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: 5, // Número de ejemplo de reportes
-      itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          elevation: 2,
-          child: ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Colors.orangeAccent,
-              child: Icon(Icons.warning, color: Colors.white),
-            ),
-            title: Text('Reporte de Incidencia #${100 + index}'),
-            subtitle: const Text('Contenido pendiente de revisión por el moderador.'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+    debugPrint('📡 Cargando moderación "$title" con filtros: $statusFilters');
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _buildReportsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          debugPrint('⚠️ snapshot.hasError en "$title": ${snapshot.error}');
+          // Mostrar el error explícitamente en pantalla y permitir selección/copia
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.check, color: Colors.green),
-                  tooltip: 'Aprobar / Validar',
-                  onPressed: () {
-                    // TODO: Lógica para aprobar
-                  },
+                const SizedBox(height: 24),
+                Icon(Icons.error_outline, size: 96, color: Colors.red.shade700),
+                const SizedBox(height: 24),
+                Text(
+                  'Error cargando reportes',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                  textAlign: TextAlign.center,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red),
-                  tooltip: 'Rechazar / Eliminar',
-                  onPressed: () {
-                    // TODO: Lógica para rechazar
-                  },
+                const SizedBox(height: 12),
+                SelectableText(
+                  snapshot.error.toString(),
+                  style: TextStyle(color: Colors.red.shade700),
                 ),
+                const SizedBox(height: 24),
               ],
             ),
-          ),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          debugPrint('⏳ Stream en espera para "$title"...');
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _StateMessage(
+            icon: emptyIcon,
+            title: title,
+            message: emptyMessage,
+          );
+        }
+
+        final reports = snapshot.data!.docs
+            .map((doc) => Report.fromMap(doc.data() as Map<String, dynamic>))
+            .toList();
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: reports.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 4),
+          itemBuilder: (context, index) {
+            final report = reports[index];
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: ReportCard(
+                report: report,
+                maskLocation: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReportDetailScreen(report: report),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
   }
 }
 
-class _ResolvedReportsList extends StatelessWidget {
-  const _ResolvedReportsList({Key? key}) : super(key: key);
+class _StateMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _StateMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          color: Colors.grey.shade100,
-          child: ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Colors.grey,
-              child: Icon(Icons.done_all, color: Colors.white),
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 56, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
-            title: Text('Reporte Revisado #${90 + index}'),
-            subtitle: const Text('Acción tomada: Incidencia cerrada.'),
-          ),
-        );
-      },
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
