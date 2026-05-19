@@ -107,7 +107,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                 final user = filteredData[index];
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: user['status'] == 'Activo' ? Colors.blue : Colors.redGrey,
+                    backgroundColor: user['status'] == 'Activo' ? Colors.blue : const Color.fromARGB(255, 129, 39, 32),
                     child: const Icon(Icons.person, color: Colors.white),
                   ),
                   title: Text(user['name']!),
