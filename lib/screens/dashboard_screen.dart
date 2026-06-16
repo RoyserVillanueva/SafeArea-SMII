@@ -1,22 +1,164 @@
 // 3.4. Probar el flujo del dashboard y redirecciones
-// 16.3. Implementar gráfico de reportes por día
+// 16.3. Implementar gráfico de reportes por día con selector de fechas
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  // ==================== CONTROL DE FECHAS ====================
+  
+  // null = "Desde siempre" (sin filtro de fechas)
+  DateTime? _startDate = null;
+  DateTime? _endDate = null;
+  
+  final List<Map<String, dynamic>> _dateRangeOptions = [
+    {'label': 'Desde siempre', 'days': null, 'isAlways': true},
+    {'label': 'Últimos 7 días', 'days': 7, 'isAlways': false},
+    {'label': 'Últimos 14 días', 'days': 14, 'isAlways': false},
+    {'label': 'Últimos 30 días', 'days': 30, 'isAlways': false},
+    {'label': 'Últimos 90 días', 'days': 90, 'isAlways': false},
+    {'label': 'Personalizado', 'days': null, 'isAlways': false},
+  ];
+  
+  String _selectedRangeLabel = 'Desde siempre';
+
+  void _updateDateRange(int? days) {
+    setState(() {
+      if (days == null) {
+        _startDate = null;
+        _endDate = null;
+      } else {
+        _startDate = DateTime.now().subtract(Duration(days: days));
+        _endDate = DateTime.now();
+      }
+    });
+  }
+
+  Future<void> _selectCustomDateRange() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2024, 1, 1),
+      lastDate: DateTime.now(),
+      initialDateRange: DateTimeRange(
+        start: _startDate ?? DateTime.now().subtract(const Duration(days: 7)),
+        end: _endDate ?? DateTime.now(),
+      ),
+    );
+    
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+        _selectedRangeLabel = 'Personalizado';
+      });
+    }
+  }
+
+  void _showDateRangeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Filtrar Dashboard por Fechas'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ..._dateRangeOptions.map((option) {
+                final isSelected = _selectedRangeLabel == option['label'];
+                return RadioListTile<String>(
+                  title: Text(option['label']),
+                  value: option['label'],
+                  groupValue: _selectedRangeLabel,
+                  onChanged: (value) {
+                    if (option['isAlways'] == true) {
+                      _updateDateRange(null);
+                      setState(() {
+                        _selectedRangeLabel = option['label'];
+                      });
+                      Navigator.pop(context);
+                    } else if (option['days'] != null) {
+                      _updateDateRange(option['days']);
+                      setState(() {
+                        _selectedRangeLabel = option['label'];
+                      });
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pop(context);
+                      _selectCustomDateRange();
+                    }
+                  },
+                );
+              }).toList(),
+              
+              const Divider(),
+              
+              // Mostrar rango actual
+              ListTile(
+                leading: const Icon(Icons.date_range),
+                title: const Text('Rango actual'),
+                subtitle: Text(
+                  _startDate == null && _endDate == null
+                      ? 'Desde siempre (todos los reportes)'
+                      : '${DateFormat('dd/MM/yyyy').format(_startDate!)} - ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _selectCustomDateRange();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== MÉTODO PARA FILTRAR FECHAS EN CLIENTE ====================
+  
+  bool _isDateInRange(DateTime? date) {
+    if (date == null) return false;
+    // Si no hay filtro de fechas, mostrar todos
+    if (_startDate == null && _endDate == null) return true;
+    return date.isAfter(_startDate!.subtract(const Duration(days: 1))) && 
+           date.isBefore(_endDate!.add(const Duration(days: 1)));
+  }
+
+  String _getDateRangeLabel() {
+    if (_startDate == null && _endDate == null) {
+      return 'Desde siempre';
+    }
+    return '${DateFormat('dd/MM/yyyy').format(_startDate!)} - ${DateFormat('dd/MM/yyyy').format(_endDate!)}';
+  }
+
+  // ==================== BUILD ====================
 
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
     final currentUser = authService.currentUser;
 
-    // RF-15: Solo administradores pueden acceder al Dashboard
     if (currentUser == null || !currentUser.isAdmin) {
       return Scaffold(
         appBar: AppBar(
@@ -37,129 +179,77 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.date_range),
+            tooltip: 'Filtrar dashboard por fechas',
+            onPressed: _showDateRangeDialog,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Estadísticas principales
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('reports')
-                  .where('isActive', isEqualTo: true)
-                  .snapshots(),
-              builder: (context, reportsSnapshot) {
-                return StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('users')
-                      .snapshots(),
-                  builder: (context, usersSnapshot) {
-                    final totalReports = reportsSnapshot.data?.docs.length ?? 0;
-                    final totalUsers = usersSnapshot.data?.docs.length ?? 0;
-                    
-                    // Contar reportes por estado
-                    int activeReports = 0;
-                    int inProcessReports = 0;
-                    int resolvedReports = 0;
-                    
-                    final reports = reportsSnapshot.data?.docs ?? [];
-                    for (final doc in reports) {
-                      final data = doc.data() as Map<String, dynamic>?;
-                      final reportStatus = data?['status'] as String?;
-                      if (reportStatus == 'activo') {
-                        activeReports++;
-                      } else if (reportStatus == 'en_proceso') {
-                        inProcessReports++;
-                      } else if (reportStatus == 'resuelto') {
-                        resolvedReports++;
-                      }
-                    }
+            // ==================== INDICADOR DE RANGO DE FECHAS ====================
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(_startDate == null && _endDate == null 
+                      ? Icons.watch_later 
+                      : Icons.calendar_today, 
+                      size: 20, 
+                      color: colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Filtro: ${_getDateRangeLabel()}',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 20),
+                    tooltip: 'Restablecer a "Desde siempre"',
+                    onPressed: () {
+                      setState(() {
+                        _startDate = null;
+                        _endDate = null;
+                        _selectedRangeLabel = 'Desde siempre';
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 16),
 
-                    return Column(
-                      children: [
-                        // Cards de estadísticas
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _StatCard(
-                                title: 'Total Reportes',
-                                value: totalReports.toString(),
-                                icon: Icons.report,
-                                color: colorScheme.primary,
-                                gradient: AppTheme.primaryGradient,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _StatCard(
-                                title: 'Total Usuarios',
-                                value: totalUsers.toString(),
-                                icon: Icons.group,
-                                color: colorScheme.secondary,
-                                gradient: AppTheme.secondaryGradient,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        // Reportes por estado
-                        Text(
-                          'Reportes por Estado',
-                          style: textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _StatCard(
-                                title: 'Activos',
-                                value: activeReports.toString(),
-                                icon: Icons.warning,
-                                color: Colors.orange,
-                                gradient: LinearGradient(
-                                  colors: [Colors.orange, Colors.deepOrange],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _StatCard(
-                                title: 'En Proceso',
-                                value: inProcessReports.toString(),
-                                icon: Icons.sync,
-                                color: Colors.blue,
-                                gradient: LinearGradient(
-                                  colors: [Colors.blue, Colors.blueAccent],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _StatCard(
-                                title: 'Resueltos',
-                                value: resolvedReports.toString(),
-                                icon: Icons.check_circle,
-                                color: Colors.green,
-                                gradient: LinearGradient(
-                                  colors: [Colors.green, Colors.greenAccent],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    );
-                  },
-                );
-              },
+            // ==================== ESTADÍSTICAS ====================
+            Text(
+              'Resumen General',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _BuildStatsSection(
+              startDate: _startDate,
+              endDate: _endDate,
+              isDateInRange: _isDateInRange,
             ),
 
-            // Reportes por tipo
+            const SizedBox(height: 24),
+
+            // ==================== REPORTES POR TIPO ====================
             Text(
               'Reportes por Tipo',
               style: textTheme.titleLarge?.copyWith(
@@ -167,23 +257,31 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _TypeStatsWidget(),
+            _TypeStatsWidget(
+              startDate: _startDate,
+              endDate: _endDate,
+              isDateInRange: _isDateInRange,
+            ),
             
             const SizedBox(height: 24),
 
-            // 📊 GRÁFICO DE REPORTES POR DÍA
+            // ==================== GRÁFICO DE REPORTES POR DÍA ====================
             Text(
-              'Reportes por Día (Últimos 7 días)',
+              'Reportes por Día',
               style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 12),
-            _ReportsByDayChart(),
+            _ReportsByDayChart(
+              startDate: _startDate,
+              endDate: _endDate,
+              isDateInRange: _isDateInRange,
+            ),
 
             const SizedBox(height: 24),
 
-            // Actividad reciente
+            // ==================== ACTIVIDAD RECIENTE ====================
             Text(
               'Actividad Reciente',
               style: textTheme.titleLarge?.copyWith(
@@ -191,10 +289,159 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _RecentActivityWidget(colorScheme: colorScheme, textTheme: textTheme),
+            _RecentActivityWidget(
+              startDate: _startDate,
+              endDate: _endDate,
+              isDateInRange: _isDateInRange,
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ============================================================
+// WIDGET: ESTADÍSTICAS (CON FILTRO DE FECHAS)
+// ============================================================
+
+class _BuildStatsSection extends StatelessWidget {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool Function(DateTime?) isDateInRange;
+
+  const _BuildStatsSection({
+    required this.startDate,
+    required this.endDate,
+    required this.isDateInRange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reports')
+          .where('isActive', isEqualTo: true)
+          .snapshots(),
+      builder: (context, reportsSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .snapshots(),
+          builder: (context, usersSnapshot) {
+            // FILTRAR REPORTES POR FECHAS EN CLIENTE
+            final allReports = reportsSnapshot.data?.docs ?? [];
+            final filteredReports = allReports.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final createdAt = data['createdAt'];
+              if (createdAt == null) return false;
+              
+              DateTime? reportDate;
+              if (createdAt is String) {
+                reportDate = DateTime.tryParse(createdAt);
+              } else {
+                try {
+                  reportDate = (createdAt as dynamic).toDate();
+                } catch (_) {}
+              }
+              
+              return isDateInRange(reportDate);
+            }).toList();
+
+            final totalReports = filteredReports.length;
+            final totalUsers = usersSnapshot.data?.docs.length ?? 0;
+            
+            int activeReports = 0;
+            int inProcessReports = 0;
+            int resolvedReports = 0;
+            
+            for (final doc in filteredReports) {
+              final data = doc.data() as Map<String, dynamic>?;
+              final reportStatus = data?['status'] as String?;
+              if (reportStatus == 'activo') {
+                activeReports++;
+              } else if (reportStatus == 'en_proceso') {
+                inProcessReports++;
+              } else if (reportStatus == 'resuelto') {
+                resolvedReports++;
+              }
+            }
+
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        title: 'Total Reportes',
+                        value: totalReports.toString(),
+                        icon: Icons.report,
+                        color: colorScheme.primary,
+                        gradient: AppTheme.primaryGradient,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StatCard(
+                        title: 'Total Usuarios',
+                        value: totalUsers.toString(),
+                        icon: Icons.group,
+                        color: colorScheme.secondary,
+                        gradient: AppTheme.secondaryGradient,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        title: 'Activos',
+                        value: activeReports.toString(),
+                        icon: Icons.warning,
+                        color: Colors.orange,
+                        gradient: LinearGradient(
+                          colors: [Colors.orange, Colors.deepOrange],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StatCard(
+                        title: 'En Proceso',
+                        value: inProcessReports.toString(),
+                        icon: Icons.sync,
+                        color: Colors.blue,
+                        gradient: LinearGradient(
+                          colors: [Colors.blue, Colors.blueAccent],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StatCard(
+                        title: 'Resueltos',
+                        value: resolvedReports.toString(),
+                        icon: Icons.check_circle,
+                        color: Colors.green,
+                        gradient: LinearGradient(
+                          colors: [Colors.green, Colors.greenAccent],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -260,10 +507,20 @@ class _StatCard extends StatelessWidget {
 }
 
 // ============================================================
-// WIDGET: ESTADÍSTICAS POR TIPO
+// WIDGET: ESTADÍSTICAS POR TIPO (CON FILTRO DE FECHAS)
 // ============================================================
 
 class _TypeStatsWidget extends StatelessWidget {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool Function(DateTime?) isDateInRange;
+
+  const _TypeStatsWidget({
+    required this.startDate,
+    required this.endDate,
+    required this.isDateInRange,
+  });
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
@@ -276,10 +533,29 @@ class _TypeStatsWidget extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final reports = snapshot.data!.docs;
+        final allReports = snapshot.data!.docs;
+        
+        // FILTRAR EN CLIENTE
+        final filteredReports = allReports.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final createdAt = data['createdAt'];
+          if (createdAt == null) return false;
+          
+          DateTime? reportDate;
+          if (createdAt is String) {
+            reportDate = DateTime.tryParse(createdAt);
+          } else {
+            try {
+              reportDate = (createdAt as dynamic).toDate();
+            } catch (_) {}
+          }
+          
+          return isDateInRange(reportDate);
+        }).toList();
+
         final typeCounts = <String, int>{};
         
-        for (final doc in reports) {
+        for (final doc in filteredReports) {
           final data = doc.data() as Map<String, dynamic>;
           final type = data['type'] as String? ?? 'otro';
           typeCounts[type] = (typeCounts[type] ?? 0) + 1;
@@ -339,40 +615,40 @@ class _TypeStatsWidget extends StatelessWidget {
 
   String _getTypeLabel(String type) {
     switch (type) {
-      case 'robo':
-        return 'Robo';
-      case 'incendio':
-        return 'Incendio';
-      case 'emergencia':
-        return 'Emergencia';
-      case 'accidente':
-        return 'Accidente';
-      default:
-        return 'Otro';
+      case 'robo': return 'Robo';
+      case 'incendio': return 'Incendio';
+      case 'emergencia': return 'Emergencia';
+      case 'accidente': return 'Accidente';
+      default: return 'Otro';
     }
   }
 
   IconData _getTypeIcon(String type) {
     switch (type) {
-      case 'robo':
-        return Icons.security;
-      case 'incendio':
-        return Icons.local_fire_department;
-      case 'emergencia':
-        return Icons.warning;
-      case 'accidente':
-        return Icons.car_crash;
-      default:
-        return Icons.report;
+      case 'robo': return Icons.security;
+      case 'incendio': return Icons.local_fire_department;
+      case 'emergencia': return Icons.warning;
+      case 'accidente': return Icons.car_crash;
+      default: return Icons.report;
     }
   }
 }
 
 // ============================================================
-// WIDGET: GRÁFICO DE REPORTES POR DÍA
+// WIDGET: GRÁFICO DE REPORTES POR DÍA (CON FILTRO DE FECHAS)
 // ============================================================
 
 class _ReportsByDayChart extends StatelessWidget {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool Function(DateTime?) isDateInRange;
+
+  const _ReportsByDayChart({
+    required this.startDate,
+    required this.endDate,
+    required this.isDateInRange,
+  });
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
@@ -395,12 +671,44 @@ class _ReportsByDayChart extends StatelessWidget {
           );
         }
 
-        final reports = snapshot.data!.docs;
+        final allReports = snapshot.data!.docs;
         
-        // Obtener fechas de los últimos 7 días
-        final now = DateTime.now();
-        final dates = List.generate(7, (index) {
-          return DateTime(now.year, now.month, now.day - (6 - index));
+        // FILTRAR EN CLIENTE
+        final filteredReports = allReports.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final createdAt = data['createdAt'];
+          if (createdAt == null) return false;
+          
+          DateTime? reportDate;
+          if (createdAt is String) {
+            reportDate = DateTime.tryParse(createdAt);
+          } else {
+            try {
+              reportDate = (createdAt as dynamic).toDate();
+            } catch (_) {}
+          }
+          
+          return isDateInRange(reportDate);
+        }).toList();
+
+        // Si no hay filtro de fechas, mostrar últimos 30 días
+        late DateTime effectiveStartDate;
+        late DateTime effectiveEndDate;
+        
+        if (startDate == null && endDate == null) {
+          effectiveEndDate = DateTime.now();
+          effectiveStartDate = effectiveEndDate.subtract(const Duration(days: 30));
+        } else {
+          effectiveStartDate = startDate!;
+          effectiveEndDate = endDate!;
+        }
+
+        // Calcular número de días en el rango
+        final daysDifference = effectiveEndDate.difference(effectiveStartDate).inDays + 1;
+        final daysToShow = daysDifference > 30 ? 30 : daysDifference;
+        
+        final dates = List.generate(daysToShow, (index) {
+          return effectiveStartDate.add(Duration(days: index));
         });
 
         // Contar reportes por día
@@ -411,7 +719,7 @@ class _ReportsByDayChart extends StatelessWidget {
           dailyCounts[key] = 0;
         }
 
-        for (final doc in reports) {
+        for (final doc in filteredReports) {
           final data = doc.data() as Map<String, dynamic>;
           final createdAt = data['createdAt'];
           DateTime? reportDate;
@@ -464,7 +772,6 @@ class _ReportsByDayChart extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Leyenda
               Row(
                 children: [
                   Container(
@@ -493,7 +800,6 @@ class _ReportsByDayChart extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              // Gráfico de líneas
               Expanded(
                 child: LineChart(
                   LineChartData(
@@ -515,6 +821,7 @@ class _ReportsByDayChart extends StatelessWidget {
                         sideTitles: SideTitles(
                           showTitles: true,
                           reservedSize: 30,
+                          interval: daysToShow > 15 ? 2 : 1,
                           getTitlesWidget: (value, meta) {
                             final index = value.toInt();
                             if (index >= 0 && index < labels.length) {
@@ -620,14 +927,20 @@ class _ReportsByDayChart extends StatelessWidget {
 }
 
 // ============================================================
-// WIDGET: ACTIVIDAD RECIENTE
+// WIDGET: ACTIVIDAD RECIENTE (CON FILTRO DE FECHAS)
 // ============================================================
 
 class _RecentActivityWidget extends StatelessWidget {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool Function(DateTime?) isDateInRange;
   final ColorScheme colorScheme;
   final TextTheme textTheme;
 
   const _RecentActivityWidget({
+    required this.startDate,
+    required this.endDate,
+    required this.isDateInRange,
     required this.colorScheme,
     required this.textTheme,
   });
@@ -645,7 +958,26 @@ class _RecentActivityWidget extends StatelessWidget {
         }
 
         final allReports = snapshot.data?.docs ?? [];
-        if (allReports.isEmpty) {
+        
+        // FILTRAR EN CLIENTE
+        final filteredReports = allReports.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final createdAt = data['createdAt'];
+          if (createdAt == null) return false;
+          
+          DateTime? reportDate;
+          if (createdAt is String) {
+            reportDate = DateTime.tryParse(createdAt);
+          } else {
+            try {
+              reportDate = (createdAt as dynamic).toDate();
+            } catch (_) {}
+          }
+          
+          return isDateInRange(reportDate);
+        }).toList();
+
+        if (filteredReports.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -654,7 +986,9 @@ class _RecentActivityWidget extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                'No hay actividad reciente',
+                startDate == null && endDate == null
+                    ? 'No hay reportes disponibles'
+                    : 'No hay actividad en este rango',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -663,8 +997,8 @@ class _RecentActivityWidget extends StatelessWidget {
           );
         }
 
-        // Ordenar por fecha
-        final reports = List.from(allReports);
+        // Ordenar por fecha (más reciente primero)
+        final reports = List.from(filteredReports);
         reports.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
@@ -701,7 +1035,6 @@ class _RecentActivityWidget extends StatelessWidget {
           return (bDate ?? DateTime.now()).compareTo(aDate ?? DateTime.now());
         });
         
-        // Limitar a 5
         final limitedReports = reports.take(5).toList();
 
         return Container(
@@ -777,16 +1110,11 @@ class _RecentActivityWidget extends StatelessWidget {
 
   IconData _getTypeIcon(String type) {
     switch (type) {
-      case 'robo':
-        return Icons.security;
-      case 'incendio':
-        return Icons.local_fire_department;
-      case 'emergencia':
-        return Icons.warning;
-      case 'accidente':
-        return Icons.car_crash;
-      default:
-        return Icons.report;
+      case 'robo': return Icons.security;
+      case 'incendio': return Icons.local_fire_department;
+      case 'emergencia': return Icons.warning;
+      case 'accidente': return Icons.car_crash;
+      default: return Icons.report;
     }
   }
 }
