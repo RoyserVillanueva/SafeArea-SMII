@@ -8,6 +8,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import 'heatmap_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -203,7 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Row(
                 children: [
                   Icon(_startDate == null && _endDate == null 
-                      ? Icons.watch_later 
+                      ? Icons.access_time
                       : Icons.calendar_today, 
                       size: 20, 
                       color: colorScheme.primary),
@@ -277,6 +278,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
               startDate: _startDate,
               endDate: _endDate,
               isDateInRange: _isDateInRange,
+            ),
+
+            const SizedBox(height: 24),
+
+            // ==================== MAPA DE CALOR (NUEVO) ====================
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary.withValues(alpha: 0.1),
+                    colorScheme.tertiary.withValues(alpha: 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: colorScheme.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.heat_pump,
+                      color: colorScheme.onPrimary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Mapa de Calor',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Visualiza la concentración de incidentes por zona',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HeatmapScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Ver Mapa'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 24),
