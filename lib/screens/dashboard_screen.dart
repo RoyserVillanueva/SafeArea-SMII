@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 
@@ -170,6 +171,18 @@ class DashboardScreen extends StatelessWidget {
             
             const SizedBox(height: 24),
 
+            // 📊 GRÁFICO DE REPORTES POR DÍA
+            Text(
+              'Reportes por Día (Últimos 7 días)',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _ReportsByDayChart(),
+
+            const SizedBox(height: 24),
+
             // Actividad reciente
             Text(
               'Actividad Reciente',
@@ -186,7 +199,10 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-// Widget para mostrar una tarjeta de estadística
+// ============================================================
+// WIDGET: TARJETA DE ESTADÍSTICA
+// ============================================================
+
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -243,7 +259,10 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// Widget para mostrar estadísticas por tipo
+// ============================================================
+// WIDGET: ESTADÍSTICAS POR TIPO
+// ============================================================
+
 class _TypeStatsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -349,7 +368,261 @@ class _TypeStatsWidget extends StatelessWidget {
   }
 }
 
-// Widget para mostrar actividad reciente
+// ============================================================
+// WIDGET: GRÁFICO DE REPORTES POR DÍA
+// ============================================================
+
+class _ReportsByDayChart extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reports')
+          .where('isActive', isEqualTo: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final reports = snapshot.data!.docs;
+        
+        // Obtener fechas de los últimos 7 días
+        final now = DateTime.now();
+        final dates = List.generate(7, (index) {
+          return DateTime(now.year, now.month, now.day - (6 - index));
+        });
+
+        // Contar reportes por día
+        final Map<String, int> dailyCounts = {};
+        
+        for (final date in dates) {
+          final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+          dailyCounts[key] = 0;
+        }
+
+        for (final doc in reports) {
+          final data = doc.data() as Map<String, dynamic>;
+          final createdAt = data['createdAt'];
+          DateTime? reportDate;
+          
+          if (createdAt != null) {
+            if (createdAt is String) {
+              reportDate = DateTime.tryParse(createdAt);
+            } else {
+              try {
+                reportDate = (createdAt as dynamic).toDate();
+              } catch (_) {}
+            }
+          }
+          
+          if (reportDate != null) {
+            final key = '${reportDate.year}-${reportDate.month.toString().padLeft(2, '0')}-${reportDate.day.toString().padLeft(2, '0')}';
+            if (dailyCounts.containsKey(key)) {
+              dailyCounts[key] = (dailyCounts[key] ?? 0) + 1;
+            }
+          }
+        }
+
+        // Preparar datos para el gráfico
+        final List<FlSpot> spots = [];
+        final List<String> labels = [];
+        int maxY = 0;
+        
+        for (int i = 0; i < dates.length; i++) {
+          final date = dates[i];
+          final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+          final count = dailyCounts[key] ?? 0;
+          spots.add(FlSpot(i.toDouble(), count.toDouble()));
+          labels.add('${date.day}/${date.month}');
+          if (count > maxY) maxY = count;
+        }
+
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+
+        return Container(
+          height: 220,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colorScheme.outlineVariant,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Leyenda
+              Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Reportes creados',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Total: ${spots.fold(0, (sum, spot) => sum + spot.y.toInt())}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Gráfico de líneas
+              Expanded(
+                child: LineChart(
+                  LineChartData(
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      horizontalInterval: maxY > 0 ? maxY / 4 : 1,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: colorScheme.outlineVariant,
+                          strokeWidth: 1,
+                          dashArray: [5, 5],
+                        );
+                      },
+                    ),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 30,
+                          getTitlesWidget: (value, meta) {
+                            final index = value.toInt();
+                            if (index >= 0 && index < labels.length) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  labels[index],
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 30,
+                          getTitlesWidget: (value, meta) {
+                            return Text(
+                              value.toInt().toString(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: Border.all(
+                        color: colorScheme.outlineVariant,
+                        width: 1,
+                      ),
+                    ),
+                    minX: 0,
+                    maxX: (spots.length - 1).toDouble(),
+                    minY: 0,
+                    maxY: maxY > 0 ? maxY.toDouble() + 1 : 5,
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        curveSmoothness: 0.3,
+                        color: AppTheme.primaryColor,
+                        barWidth: 3,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) {
+                            return FlDotCirclePainter(
+                              radius: 4,
+                              color: AppTheme.primaryColor,
+                              strokeWidth: 2,
+                              strokeColor: colorScheme.surface,
+                            );
+                          },
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ],
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipItems: (touchedSpots) {
+                          return touchedSpots.map((touchedSpot) {
+                            final spot = touchedSpot;
+                            final index = spot.spotIndex;
+                            return LineTooltipItem(
+                              '${labels[index]}: ${spot.y.toInt()} reportes',
+                              TextStyle(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          }).toList();
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ============================================================
+// WIDGET: ACTIVIDAD RECIENTE
+// ============================================================
+
 class _RecentActivityWidget extends StatelessWidget {
   final ColorScheme colorScheme;
   final TextTheme textTheme;
@@ -390,7 +663,7 @@ class _RecentActivityWidget extends StatelessWidget {
           );
         }
 
-        // Ordenar por fecha (manejar tanto String como Timestamp)
+        // Ordenar por fecha
         final reports = List.from(allReports);
         reports.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
@@ -518,7 +791,10 @@ class _RecentActivityWidget extends StatelessWidget {
   }
 }
 
-// Widget para mostrar acceso denegado
+// ============================================================
+// WIDGET: ACCESO DENEGADO
+// ============================================================
+
 class _AccessDeniedWidget extends StatelessWidget {
   final String message;
 
@@ -562,4 +838,3 @@ class _AccessDeniedWidget extends StatelessWidget {
     );
   }
 }
-
