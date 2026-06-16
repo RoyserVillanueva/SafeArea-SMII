@@ -63,6 +63,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       );
     }
   }
+  // Por temas del plan de facturación, las notificaciones push se mantendra en espera
+  // Se buscara alguna alternativa para el proyecto.
   
   // En Web, Firebase Messaging maneja las notificaciones automáticamente
   // Aquí puedes procesar la notificación, actualizar base de datos local, etc.
