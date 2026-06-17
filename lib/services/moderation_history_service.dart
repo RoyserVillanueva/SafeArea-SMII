@@ -1,29 +1,20 @@
+// 18.6 Registrar historial de moderación
 // moderation_history_service.dart
-class ModerationHistoryService {
-  // Simulamos una base de datos local temporal
-  static final List<Map<String, dynamic>> _history = [];
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-  // Método para registrar una acción en el historial
-  static void recordAction({
-    required String reportId, 
-    required String action, 
-    required String moderatorId
-  }) {
-    final newEntry = {
+class ModerationHistoryService {
+  static Future<void> recordAction({
+    required String reportId,
+    required String action,
+    required String moderatorId,
+    String? reason,
+  }) async {
+    await FirebaseFirestore.instance.collection('moderation_history').add({
       'reportId': reportId,
       'action': action,
-      'date': DateTime.now(),
       'moderatorId': moderatorId,
-    };
-    
-    _history.add(newEntry);
-    
-    // TODO: Aquí iría la conexión para guardarlo en la base de datos (ej. SQL Server o Firebase)
-    print('Historial guardado: Acción "$action" en el reporte $reportId por $moderatorId');
-  }
-
-  // Método para obtener el historial
-  static List<Map<String, dynamic>> getHistory() {
-    return _history;
+      'reason': reason ?? '',
+      'date': DateTime.now().toIso8601String(),
+    });
   }
 }
