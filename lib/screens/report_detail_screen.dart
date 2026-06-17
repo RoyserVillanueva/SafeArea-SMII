@@ -2,11 +2,15 @@
 // 8.5. Mostrar datos del autor
 // 10.2. Validar que solo el autor pueda modificar
 // 10.4. Implementar eliminación con confirmación
+// 18.3 Implementación de aprobacion/rechazo
+// 18.4 Justicacion de eliminacion
+// 18.6 Registrar historial de moderación
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/report_service.dart';
+import '../services/moderation_history_service.dart';
 import '../models/report_model.dart';
 import '../models/user_model.dart'; // 🔐 NUEVA IMPORTACIÓN : 8.5 Mostrar Datos del autor
 import 'edit_report_screen.dart';
@@ -143,7 +147,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     final bool isOwner = authService.currentUser?.id == _report.userId;
 
     final bool isAdmin = authService.currentUser?.isAdmin ?? false;
-    final bool canModerate = isAdmin || isOwner;
+    final bool canModerate = isAdmin;
 
     return Scaffold(
       appBar: AppBar(
@@ -482,14 +486,81 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children: [
-                  _buildStatusButton(context, 'activo', reportService),
-                  _buildStatusButton(context, 'en_proceso', reportService),
-                  _buildStatusButton(context, 'resuelto', reportService),
-                ],
-              ),
+              _report.status == 'pendiente'
+                  ? Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final error = await reportService.changeReportStatus(_report.id, 'activo');
+                            if (error == null) {
+                              await ModerationHistoryService.recordAction(
+                                reportId: _report.id,
+                                action: 'aprobado',
+                                moderatorId: authService.currentUser?.id ?? '',
+                              );
+                              setState(() {
+                                _report = _report.copyWith(status: 'activo');
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.check, color: Colors.white),
+                          label: const Text('Aprobar', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final textController = TextEditingController();
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Justificación de eliminación'),
+                                content: TextField(
+                                  controller: textController,
+                                  decoration: const InputDecoration(hintText: 'Ingrese el motivo del rechazo'),
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+                                  TextButton(
+                                    onPressed: () {
+                                      if (textController.text.trim().isNotEmpty) {
+                                        Navigator.pop(context, true);
+                                      }
+                                    },
+                                    child: const Text('Confirmar'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) {
+                              final error = await reportService.changeReportStatus(_report.id, 'rechazado');
+                              if (error == null) {
+                                await ModerationHistoryService.recordAction(
+                                  reportId: _report.id,
+                                  action: 'rechazado',
+                                  moderatorId: authService.currentUser?.id ?? '',
+                                  reason: textController.text.trim(),
+                                );
+                                setState(() {
+                                  _report = _report.copyWith(status: 'rechazado');
+                                });
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          label: const Text('Rechazar', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        ),
+                      ],
+                    )
+                  : Wrap(
+                      spacing: 8,
+                      children: [
+                        _buildStatusButton(context, 'activo', reportService),
+                        _buildStatusButton(context, 'en_proceso', reportService),
+                        _buildStatusButton(context, 'resuelto', reportService),
+                      ],
+                    ),
               const SizedBox(height: 12),
             ],
           ],
