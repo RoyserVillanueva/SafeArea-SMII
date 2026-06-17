@@ -95,16 +95,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
           .where('isActive', isEqualTo: true);
       
       // Aplicar filtros
-      if (reportService.selectedFilter != 'todos') {
-        query = query.where('type', isEqualTo: reportService.selectedFilter);
-      }
-      if (reportService.selectedStatus != 'todos') {
+      if (reportService.selectedFilter != 'todos' && reportService.selectedStatus != 'todos') {
+        query = query
+            .where('type', isEqualTo: reportService.selectedFilter)
+            .where('status', isEqualTo: reportService.selectedStatus);
+      } else if (reportService.selectedFilter != 'todos') {
+        query = query
+            .where('type', isEqualTo: reportService.selectedFilter)
+            .where('status', whereIn: ['activo', 'en_proceso', 'resuelto']);
+      } else if (reportService.selectedStatus != 'todos') {
         query = query.where('status', isEqualTo: reportService.selectedStatus);
+      } else {
+        query = query.where('status', whereIn: ['activo', 'en_proceso', 'resuelto']);
       }
-      
       // Ordenar y limitar
       query = query.orderBy('createdAt', descending: true).limit(20);
-      
       // Paginación
       if (_lastDocument != null) {
         query = query.startAfterDocument(_lastDocument!);
@@ -115,6 +120,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (snapshot.docs.isEmpty) {
         _hasMore = false;
       } else {
+        if (snapshot.docs.length < 20) {
+          _hasMore = false;
+        }
         _lastDocument = snapshot.docs.last;
         final newReports = snapshot.docs.map((doc) => 
           Report.fromMap(doc.data() as Map<String, dynamic>)).toList();

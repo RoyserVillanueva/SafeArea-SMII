@@ -75,7 +75,7 @@ class ReportService with ChangeNotifier {
         'title': title,
         'description': description,
         'location': location,
-        'status': 'activo',
+        'status': 'pendiente',
         'images': images ?? <String>[],
         'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
@@ -176,9 +176,11 @@ class ReportService with ChangeNotifier {
           .where('type', isEqualTo: typeFilter)
           .where('status', isEqualTo: statusFilter);
     } else if (hasTypeFilter) {
-      query = query.where('type', isEqualTo: typeFilter);
+      query = query.where('type', isEqualTo: typeFilter).where('status', isEqualTo: 'activo');
     } else if (hasStatusFilter) {
       query = query.where('status', isEqualTo: statusFilter);
+    } else {
+      query = query.where('status', isEqualTo: 'activo');
     }
 
     return query.orderBy('createdAt', descending: true).snapshots();

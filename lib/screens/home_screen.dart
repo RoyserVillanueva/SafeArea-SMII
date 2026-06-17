@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import 'profile_screen.dart';
 import 'reports_screen.dart';
+import 'moderation_screen.dart';
 import 'district_chat_screen.dart';  // Importar DistrictChatScreen
 import 'users_screen.dart';
 import 'settings_screen.dart';
@@ -232,7 +233,7 @@ class HomeScreen extends StatelessWidget {
           },
         ),
         // Reportes
-        _buildFeatureCard(
+          _buildFeatureCard(
           icon: Icons.report,
           title: 'Reportes',
           subtitle: 'Ver y moderar reportes',
@@ -241,7 +242,7 @@ class HomeScreen extends StatelessWidget {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ReportsScreen()),
+              MaterialPageRoute(builder: (context) => const ModerationScreen()),
             );
           },
         ),
