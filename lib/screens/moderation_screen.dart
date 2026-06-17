@@ -1,3 +1,5 @@
+// 18.1 Diseño de pantalla de moderación
+// 18.2 Listar reportes pendientes
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -28,13 +30,13 @@ class ModerationScreen extends StatelessWidget {
             _ModerationReportsList(
               title: 'Reportes pendientes',
               emptyMessage: 'No hay reportes pendientes por revisar.',
-              statusFilters: ['activo', 'en_proceso'],
+              statusFilters: ['pendiente'],
               emptyIcon: Icons.inbox_outlined,
             ),
             _ModerationReportsList(
               title: 'Historial de reportes',
-              emptyMessage: 'No hay reportes resueltos aún.',
-              statusFilters: ['resuelto'],
+              emptyMessage: 'No hay reportes moderados aún.',
+              statusFilters: ['activo', 'en_proceso', 'resuelto', 'rechazado'],
               emptyIcon: Icons.done_all_outlined,
             ),
           ],
