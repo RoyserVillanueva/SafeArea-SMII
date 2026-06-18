@@ -1,4 +1,6 @@
 // 17.4. Agregar opción eliminar usuario
+// 17.5. Registrar acciones en logs
+// 17.6. Notificar al usuario afectado
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -19,31 +21,192 @@ class _UsersScreenState extends State<UsersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // RF-16: Cambiar estado activo/inactivo de un usuario
+  // ==================== TAREA 3: BLOQUEAR/DESBLOQUEAR ====================
   Future<void> _toggleUserStatus(BuildContext context, String userId, bool currentStatus) async {
     try {
       await FirebaseFirestore.instance.collection('users').doc(userId).update({
         'isActive': !currentStatus,
       });
+      
+      // TAREA 5: Registrar acción en logs
+      _logAction(
+        action: currentStatus ? 'desactivar' : 'activar',
+        userId: userId,
+        details: 'Usuario ${currentStatus ? 'desactivado' : 'activado'}',
+      );
+      
+      // TAREA 6: Notificar al usuario afectado
+      await _notifyUser(userId, currentStatus ? 'Cuenta desactivada' : 'Cuenta activada');
+      
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             currentStatus 
-                ? 'Usuario desactivado' 
-                : 'Usuario activado',
+                ? '✅ Usuario desactivado' 
+                : '✅ Usuario activado',
           ),
+          backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cambiar estado: $e')),
+        SnackBar(content: Text('❌ Error al cambiar estado: $e')),
       );
     }
   }
 
-  // Cambiar rol de un usuario (solo administradores)
+  // ==================== TAREA 4: ELIMINAR USUARIO ====================
+  Future<void> _deleteUser(BuildContext context, String userId, String userName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Eliminar Usuario'),
+          content: Text(
+            '¿Estás seguro de eliminar a "$userName"?\n\n'
+            '⚠️ Esta acción es irreversible y eliminará:\n'
+            '• Todos los reportes del usuario\n'
+            '• Todos los mensajes del usuario\n'
+            '• La cuenta del usuario permanentemente',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                'Eliminar',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      try {
+        // Mostrar diálogo de carga
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 16),
+                Text('Eliminando usuario...'),
+              ],
+            ),
+          ),
+        );
+
+        // 1. Eliminar reportes del usuario
+        final reportsSnapshot = await FirebaseFirestore.instance
+            .collection('reports')
+            .where('userId', isEqualTo: userId)
+            .get();
+
+        final batch = FirebaseFirestore.instance.batch();
+        for (final doc in reportsSnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+
+        // 2. Eliminar mensajes del usuario en todos los grupos
+        // Buscar mensajes del usuario en todos los grupos usando collectionGroup
+        final messagesSnapshot = await FirebaseFirestore.instance
+            .collectionGroup('messages')
+            .where('userId', isEqualTo: userId)
+            .get();
+
+        final batch2 = FirebaseFirestore.instance.batch();
+        for (final doc in messagesSnapshot.docs) {
+          batch2.delete(doc.reference);
+        }
+        await batch2.commit();
+
+        // 3. Eliminar el documento del usuario
+        await FirebaseFirestore.instance.collection('users').doc(userId).delete();
+
+        // TAREA 5: Registrar acción en logs
+        _logAction(
+          action: 'eliminar',
+          userId: userId,
+          details: 'Usuario $userName eliminado permanentemente',
+        );
+
+        // Cerrar diálogo de carga
+        if (context.mounted) Navigator.pop(context);
+        
+        // Mostrar mensaje de éxito
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Usuario "$userName" eliminado correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        if (context.mounted) Navigator.pop(context);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error al eliminar usuario: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ==================== TAREA 5: REGISTRAR ACCIONES EN LOGS ====================
+  void _logAction({
+    required String action,
+    required String userId,
+    required String details,
+  }) {
+    // Guardar en Firestore (colección de logs)
+    FirebaseFirestore.instance.collection('admin_logs').add({
+      'action': action,
+      'userId': userId,
+      'adminId': Provider.of<AuthService>(context, listen: false).currentUser?.id,
+      'adminName': Provider.of<AuthService>(context, listen: false).currentUser?.name,
+      'details': details,
+      'timestamp': FieldValue.serverTimestamp(),
+    }).then((_) {
+      debugPrint('📝 Log registrado: $action - $details');
+    }).catchError((e) {
+      debugPrint('❌ Error registrando log: $e');
+    });
+  }
+
+  // ==================== TAREA 6: NOTIFICAR AL USUARIO AFECTADO ====================
+  Future<void> _notifyUser(String userId, String message) async {
+    try {
+      // Crear notificación en Firestore para el usuario
+      await FirebaseFirestore.instance.collection('users').doc(userId).collection('notifications').add({
+        'title': 'Actualización de cuenta',
+        'body': message,
+        'type': 'account_update',
+        'read': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('📨 Notificación enviada al usuario $userId: $message');
+    } catch (e) {
+      debugPrint('❌ Error enviando notificación: $e');
+    }
+  }
+
+  // ==================== CAMBIAR ROL ====================
   Future<void> _changeUserRole(BuildContext context, String userId, String currentRole) async {
     final newRole = currentRole == 'admin' ? 'user' : 'admin';
     final authService = Provider.of<AuthService>(context, listen: false);
@@ -78,10 +241,20 @@ class _UsersScreenState extends State<UsersScreen> {
       if (!context.mounted) return;
       
       if (error == null) {
+        // TAREA 5: Registrar acción
+        _logAction(
+          action: 'cambiar_rol',
+          userId: userId,
+          details: 'Rol cambiado a $newRole',
+        );
+        
+        // TAREA 6: Notificar al usuario
+        await _notifyUser(userId, 'Tu rol ha sido cambiado a ${newRole == 'admin' ? "Administrador" : "Usuario"}');
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Rol cambiado a ${newRole == 'admin' ? 'Administrador' : 'Usuario'}',
+              '✅ Rol cambiado a ${newRole == 'admin' ? 'Administrador' : 'Usuario'}',
             ),
             backgroundColor: Colors.green,
           ),
@@ -97,12 +270,13 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
+  // ==================== BUILD ====================
+
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
     final currentUser = authService.currentUser;
 
-    // RF-16: Solo administradores pueden acceder a la Gestión de Usuarios
     if (currentUser == null || !currentUser.isAdmin) {
       return Scaffold(
         appBar: AppBar(
@@ -122,6 +296,14 @@ class _UsersScreenState extends State<UsersScreen> {
       appBar: AppBar(
         title: const Text('Gestión de Usuarios'),
         elevation: 0,
+        actions: [
+          // Botón para ver logs de administración
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Ver logs de administración',
+            onPressed: () => _showAdminLogs(),
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
@@ -140,7 +322,6 @@ class _UsersScreenState extends State<UsersScreen> {
             return const Center(child: Text('No hay usuarios'));
           }
 
-          // RF-16: Separar usuarios activos e inactivos
           final activeUsers = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
           final inactiveUsers = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
 
@@ -154,7 +335,6 @@ class _UsersScreenState extends State<UsersScreen> {
             }
           }
 
-          // Ordenar alfabéticamente por nombre dentro de cada lista
           int compareByName(
             QueryDocumentSnapshot<Map<String, dynamic>> a,
             QueryDocumentSnapshot<Map<String, dynamic>> b,
@@ -169,7 +349,6 @@ class _UsersScreenState extends State<UsersScreen> {
           activeUsers.sort(compareByName);
           inactiveUsers.sort(compareByName);
 
-          // Aplicar filtro de búsqueda por nombre o email (case-insensitive)
           List<QueryDocumentSnapshot<Map<String, dynamic>>> applySearch(
             List<QueryDocumentSnapshot<Map<String, dynamic>>> list,
           ) {
@@ -203,7 +382,6 @@ class _UsersScreenState extends State<UsersScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              // Usuarios activos
               if (filteredActive.isNotEmpty) ...[
                 Text(
                   'Usuarios Activos (${filteredActive.length})',
@@ -217,13 +395,13 @@ class _UsersScreenState extends State<UsersScreen> {
                   doc: doc,
                   currentUser: currentUser,
                   onToggleStatus: _toggleUserStatus,
+                  onDeleteUser: _deleteUser,
                   colorScheme: colorScheme,
                   theme: theme,
                 )),
                 const SizedBox(height: 24),
               ],
 
-              // Usuarios inactivos
               if (filteredInactive.isNotEmpty) ...[
                 Text(
                   'Usuarios Inactivos (${filteredInactive.length})',
@@ -238,6 +416,7 @@ class _UsersScreenState extends State<UsersScreen> {
                   doc: doc,
                   currentUser: currentUser,
                   onToggleStatus: _toggleUserStatus,
+                  onDeleteUser: _deleteUser,
                   colorScheme: colorScheme,
                   theme: theme,
                 )),
@@ -249,17 +428,116 @@ class _UsersScreenState extends State<UsersScreen> {
     );
   }
 
+  // ==================== VER LOGS DE ADMINISTRACIÓN ====================
+  void _showAdminLogs() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: double.maxFinite,
+          height: 400,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    '📝 Logs de Administración',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('admin_logs')
+                      .orderBy('timestamp', descending: true)
+                      .limit(50)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final logs = snapshot.data!.docs;
+                    if (logs.isEmpty) {
+                      return const Center(child: Text('No hay logs registrados'));
+                    }
+                    return ListView.builder(
+                      itemCount: logs.length,
+                      itemBuilder: (context, index) {
+                        final data = logs[index].data() as Map<String, dynamic>;
+                        final action = data['action'] ?? '';
+                        final details = data['details'] ?? '';
+                        final adminName = data['adminName'] ?? 'Sistema';
+                        final timestamp = data['timestamp'] as Timestamp?;
+                        final date = timestamp?.toDate().toString().substring(0, 19) ?? 'Fecha desconocida';
+                        
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            _getLogIcon(action),
+                            color: _getLogColor(action),
+                          ),
+                          title: Text(
+                            '$action: $details',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            '👤 $adminName • $date',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getLogIcon(String action) {
+    switch (action) {
+      case 'activar': return Icons.check_circle;
+      case 'desactivar': return Icons.block;
+      case 'eliminar': return Icons.delete_forever;
+      case 'cambiar_rol': return Icons.admin_panel_settings;
+      default: return Icons.info;
+    }
+  }
+
+  Color _getLogColor(String action) {
+    switch (action) {
+      case 'activar': return Colors.green;
+      case 'desactivar': return Colors.orange;
+      case 'eliminar': return Colors.red;
+      case 'cambiar_rol': return Colors.purple;
+      default: return Colors.grey;
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  // ==================== WIDGET: TARJETA DE USUARIO ====================
   Widget _buildUserTile({
     required BuildContext context,
     required QueryDocumentSnapshot<Map<String, dynamic>> doc,
     required UserModel? currentUser,
     required Function(BuildContext, String, bool) onToggleStatus,
+    required Function(BuildContext, String, String) onDeleteUser,
     required ColorScheme colorScheme,
     required ThemeData theme,
   }) {
@@ -270,7 +548,6 @@ class _UsersScreenState extends State<UsersScreen> {
     final isCurrentUser = currentUser?.id == userId;
     final isAdmin = currentUser?.isAdmin ?? false;
 
-    // Presencia en línea basada en isOnline y lastSeen
     final rawIsOnline = u['isOnline'] == true;
     final lastSeenRaw = u['lastSeen'];
     DateTime? lastSeen;
@@ -282,9 +559,10 @@ class _UsersScreenState extends State<UsersScreen> {
     bool isOnline = false;
     if (rawIsOnline && lastSeen != null) {
       final diff = DateTime.now().difference(lastSeen);
-      // Considerar en línea si la última actividad fue en los últimos 3 minutos
       isOnline = diff.inMinutes < 3;
     }
+
+    final userName = u['name'] ?? 'Usuario';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -304,7 +582,6 @@ class _UsersScreenState extends State<UsersScreen> {
                   ? const Icon(Icons.person)
                   : null,
             ),
-            // RF-16: Indicador de estado
             Positioned(
               bottom: 0,
               right: 0,
@@ -327,7 +604,7 @@ class _UsersScreenState extends State<UsersScreen> {
           children: [
             Expanded(
               child: Text(
-                u['name'] ?? 'Usuario',
+                userName,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                   decoration: isActive ? null : TextDecoration.lineThrough,
@@ -370,11 +647,7 @@ class _UsersScreenState extends State<UsersScreen> {
                     color: isActive ? Colors.green : Colors.grey,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
+                const SizedBox(width: 12),
                 Icon(
                   Icons.circle,
                   size: 10,
@@ -391,7 +664,6 @@ class _UsersScreenState extends State<UsersScreen> {
             ),
           ],
         ),
-        // Tocar el usuario abre un chat privado (solo texto) si no es uno mismo
         onTap: !isCurrentUser
             ? () async {
                 final authService = Provider.of<AuthService>(context, listen: false);
@@ -403,7 +675,7 @@ class _UsersScreenState extends State<UsersScreen> {
                   currentUserId: me.id,
                   currentUserName: me.name,
                   otherUserId: userId,
-                  otherUserName: (u['name'] as String?) ?? 'Usuario',
+                  otherUserName: userName,
                 );
 
                 if (!context.mounted || chatId == null) return;
@@ -412,7 +684,7 @@ class _UsersScreenState extends State<UsersScreen> {
                   MaterialPageRoute(
                     builder: (_) => ChatScreen(
                       groupId: chatId,
-                      groupName: (u['name'] as String?) ?? 'Chat privado',
+                      groupName: 'Chat con $userName',
                     ),
                   ),
                 );
@@ -435,7 +707,7 @@ class _UsersScreenState extends State<UsersScreen> {
                         : 'Hacer administrador',
                     onPressed: () => _changeUserRole(context, userId, role),
                   ),
-                  // Botón para cambiar estado
+                  // Botón para cambiar estado (bloquear/desbloquear)
                   IconButton(
                     icon: Icon(
                       isActive ? Icons.block : Icons.check_circle,
@@ -443,6 +715,15 @@ class _UsersScreenState extends State<UsersScreen> {
                     ),
                     tooltip: isActive ? 'Desactivar usuario' : 'Activar usuario',
                     onPressed: () => onToggleStatus(context, userId, isActive),
+                  ),
+                  // 🆕 TAREA 4: Botón para eliminar usuario
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_forever,
+                      color: colorScheme.error,
+                    ),
+                    tooltip: 'Eliminar usuario permanentemente',
+                    onPressed: () => onDeleteUser(context, userId, userName),
                   ),
                 ],
               )
@@ -452,7 +733,8 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 }
 
-// Widget para mostrar acceso denegado
+// ==================== WIDGET: ACCESO DENEGADO ====================
+
 class _AccessDeniedWidget extends StatelessWidget {
   final String message;
 
@@ -496,4 +778,3 @@ class _AccessDeniedWidget extends StatelessWidget {
     );
   }
 }
-
