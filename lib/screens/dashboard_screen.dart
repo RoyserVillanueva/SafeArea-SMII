@@ -1,5 +1,7 @@
 // 3.4. Probar el flujo del dashboard y redirecciones
 // 16.3. Implementar gráfico de reportes por día con selector de fechas
+// 16.5. Calcular usuarios activos diarios
+// 16.6. Exportar datos a CSV
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +10,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/export_service.dart';
 import 'heatmap_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -34,6 +37,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ];
   
   String _selectedRangeLabel = 'Desde siempre';
+
+  // ==================== MÉTODOS DE FECHAS ====================
 
   void _updateDateRange(int? days) {
     setState(() {
@@ -136,11 +141,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ==================== MÉTODO PARA FILTRAR FECHAS EN CLIENTE ====================
-  
   bool _isDateInRange(DateTime? date) {
     if (date == null) return false;
-    // Si no hay filtro de fechas, mostrar todos
     if (_startDate == null && _endDate == null) return true;
     return date.isAfter(_startDate!.subtract(const Duration(days: 1))) && 
            date.isBefore(_endDate!.add(const Duration(days: 1)));
@@ -151,6 +153,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return 'Desde siempre';
     }
     return '${DateFormat('dd/MM/yyyy').format(_startDate!)} - ${DateFormat('dd/MM/yyyy').format(_endDate!)}';
+  }
+
+  // ==================== EXPORTAR A CSV ====================
+
+  Future<void> _exportReports() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 16),
+              Text('Exportando reportes...'),
+            ],
+          ),
+        ),
+      );
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('reports')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final reports = snapshot.docs;
+
+      await ExportService.exportReportsToCSV(
+        reports: reports,
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Reportes exportados correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error al exportar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // ==================== BUILD ====================
@@ -186,6 +245,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             tooltip: 'Filtrar dashboard por fechas',
             onPressed: _showDateRangeDialog,
           ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Exportar reportes a CSV',
+            onPressed: _exportReports,
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -204,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Row(
                 children: [
                   Icon(_startDate == null && _endDate == null 
-                      ? Icons.access_time
+                      ? Icons.access_time_filled 
                       : Icons.calendar_today, 
                       size: 20, 
                       color: colorScheme.primary),
@@ -250,6 +314,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             const SizedBox(height: 24),
 
+            // ==================== USUARIOS ACTIVOS ====================
+            Text(
+              'Usuarios Activos',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _ActiveUsersWidget(
+              startDate: _startDate,
+              endDate: _endDate,
+              isDateInRange: _isDateInRange,
+            ),
+
+            const SizedBox(height: 24),
+
             // ==================== REPORTES POR TIPO ====================
             Text(
               'Reportes por Tipo',
@@ -282,7 +362,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             const SizedBox(height: 24),
 
-            // ==================== MAPA DE CALOR (NUEVO) ====================
+            // ==================== MAPA DE CALOR ====================
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -406,7 +486,6 @@ class _BuildStatsSection extends StatelessWidget {
               .collection('users')
               .snapshots(),
           builder: (context, usersSnapshot) {
-            // FILTRAR REPORTES POR FECHAS EN CLIENTE
             final allReports = reportsSnapshot.data?.docs ?? [];
             final filteredReports = allReports.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
@@ -579,6 +658,214 @@ class _StatCard extends StatelessWidget {
 }
 
 // ============================================================
+// WIDGET: USUARIOS ACTIVOS DIARIOS
+// ============================================================
+
+class _ActiveUsersWidget extends StatelessWidget {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool Function(DateTime?) isDateInRange;
+
+  const _ActiveUsersWidget({
+    required this.startDate,
+    required this.endDate,
+    required this.isDateInRange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reports')
+          .where('isActive', isEqualTo: true)
+          .snapshots(),
+      builder: (context, reportsSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .snapshots(),
+          builder: (context, usersSnapshot) {
+            final allUsers = usersSnapshot.data?.docs ?? [];
+            
+            final allReports = reportsSnapshot.data?.docs ?? [];
+            final filteredReports = allReports.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final createdAt = data['createdAt'];
+              if (createdAt == null) return false;
+              
+              DateTime? reportDate;
+              if (createdAt is String) {
+                reportDate = DateTime.tryParse(createdAt);
+              } else {
+                try {
+                  reportDate = (createdAt as dynamic).toDate();
+                } catch (_) {}
+              }
+              
+              return isDateInRange(reportDate);
+            }).toList();
+
+            final activeUserIds = filteredReports
+                .map((doc) => (doc.data() as Map<String, dynamic>)['userId'] as String?)
+                .where((id) => id != null)
+                .toSet()
+                .cast<String>()
+                .toList();
+
+            final now = DateTime.now();
+            final daysToShow = startDate == null && endDate == null ? 7 : 
+                (endDate!.difference(startDate!).inDays + 1 > 30 ? 30 : endDate!.difference(startDate!).inDays + 1);
+            
+            final dates = List.generate(daysToShow, (index) {
+              return now.subtract(Duration(days: (daysToShow - 1) - index));
+            });
+
+            final dailyActiveUsers = <String, int>{};
+            for (final date in dates) {
+              final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+              dailyActiveUsers[key] = 0;
+            }
+
+            for (final doc in filteredReports) {
+              final data = doc.data() as Map<String, dynamic>;
+              final createdAt = data['createdAt'];
+              final userId = data['userId'] as String?;
+              if (userId == null) continue;
+              
+              DateTime? reportDate;
+              if (createdAt is String) {
+                reportDate = DateTime.tryParse(createdAt);
+              } else {
+                try {
+                  reportDate = (createdAt as dynamic).toDate();
+                } catch (_) {}
+              }
+              
+              if (reportDate != null) {
+                final key = '${reportDate.year}-${reportDate.month.toString().padLeft(2, '0')}-${reportDate.day.toString().padLeft(2, '0')}';
+                final dayKey = '${key}_$userId';
+                if (!dailyActiveUsers.containsKey(dayKey)) {
+                  dailyActiveUsers[key] = (dailyActiveUsers[key] ?? 0) + 1;
+                  dailyActiveUsers[dayKey] = 1;
+                }
+              }
+            }
+
+            final List<BarChartGroupData> barGroups = [];
+            final List<String> labels = [];
+            int maxY = 0;
+
+            for (int i = 0; i < dates.length; i++) {
+              final date = dates[i];
+              final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+              final count = dailyActiveUsers[key] ?? 0;
+              barGroups.add(
+                BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: count.toDouble(),
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 20,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ],
+                ),
+              );
+              labels.add('${date.day}/${date.month}');
+              if (count > maxY) maxY = count;
+            }
+
+            final theme = Theme.of(context);
+            final colorScheme = theme.colorScheme;
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colorScheme.outlineVariant),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '👥 Usuarios activos',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Total: ${activeUserIds.length} usuarios',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 150,
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: (maxY + 1).toDouble(),
+                        barGroups: barGroups,
+                        titlesData: FlTitlesData(
+                          show: true,
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 30,
+                              interval: labels.length > 15 ? 2 : 1,
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                if (index >= 0 && index < labels.length) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      labels[index],
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                          ),
+                          leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                        ),
+                        gridData: const FlGridData(show: false),
+                        borderData: FlBorderData(show: false),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// ============================================================
 // WIDGET: ESTADÍSTICAS POR TIPO (CON FILTRO DE FECHAS)
 // ============================================================
 
@@ -607,7 +894,6 @@ class _TypeStatsWidget extends StatelessWidget {
 
         final allReports = snapshot.data!.docs;
         
-        // FILTRAR EN CLIENTE
         final filteredReports = allReports.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final createdAt = data['createdAt'];
@@ -745,7 +1031,6 @@ class _ReportsByDayChart extends StatelessWidget {
 
         final allReports = snapshot.data!.docs;
         
-        // FILTRAR EN CLIENTE
         final filteredReports = allReports.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final createdAt = data['createdAt'];
@@ -763,7 +1048,6 @@ class _ReportsByDayChart extends StatelessWidget {
           return isDateInRange(reportDate);
         }).toList();
 
-        // Si no hay filtro de fechas, mostrar últimos 30 días
         late DateTime effectiveStartDate;
         late DateTime effectiveEndDate;
         
@@ -775,7 +1059,6 @@ class _ReportsByDayChart extends StatelessWidget {
           effectiveEndDate = endDate!;
         }
 
-        // Calcular número de días en el rango
         final daysDifference = effectiveEndDate.difference(effectiveStartDate).inDays + 1;
         final daysToShow = daysDifference > 30 ? 30 : daysDifference;
         
@@ -783,7 +1066,6 @@ class _ReportsByDayChart extends StatelessWidget {
           return effectiveStartDate.add(Duration(days: index));
         });
 
-        // Contar reportes por día
         final Map<String, int> dailyCounts = {};
         
         for (final date in dates) {
@@ -814,7 +1096,6 @@ class _ReportsByDayChart extends StatelessWidget {
           }
         }
 
-        // Preparar datos para el gráfico
         final List<FlSpot> spots = [];
         final List<String> labels = [];
         int maxY = 0;
@@ -1031,7 +1312,6 @@ class _RecentActivityWidget extends StatelessWidget {
 
         final allReports = snapshot.data?.docs ?? [];
         
-        // FILTRAR EN CLIENTE
         final filteredReports = allReports.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final createdAt = data['createdAt'];
@@ -1069,7 +1349,6 @@ class _RecentActivityWidget extends StatelessWidget {
           );
         }
 
-        // Ordenar por fecha (más reciente primero)
         final reports = List.from(filteredReports);
         reports.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
