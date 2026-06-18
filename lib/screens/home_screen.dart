@@ -4,11 +4,12 @@ import '../services/auth_service.dart';
 import 'profile_screen.dart';
 import 'reports_screen.dart';
 import 'moderation_screen.dart';
-import 'district_chat_screen.dart';  // Importar DistrictChatScreen
+import 'district_chat_screen.dart';
 import 'users_screen.dart';
 import 'settings_screen.dart';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
+import 'zone_management_screen.dart'; // 🔐 NUEVA IMPORTACIÓN
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -233,7 +234,7 @@ class HomeScreen extends StatelessWidget {
           },
         ),
         // Reportes
-          _buildFeatureCard(
+        _buildFeatureCard(
           icon: Icons.report,
           title: 'Reportes',
           subtitle: 'Ver y moderar reportes',
@@ -243,6 +244,22 @@ class HomeScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ModerationScreen()),
+            );
+          },
+        ),
+        // 🔐 NUEVO: Gestión de Zonas
+        _buildFeatureCard(
+          icon: Icons.chat_bubble_outline,
+          title: 'Zonas de Chat',
+          subtitle: 'Gestionar zonas de chat',
+          color: colorScheme.tertiary,
+          context: context,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ZoneManagementScreen(),
+              ),
             );
           },
         ),
